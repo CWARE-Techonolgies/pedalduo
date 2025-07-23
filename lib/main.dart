@@ -1,8 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:pedalduo/chat/chat_room_provider.dart';
+import 'package:pedalduo/payments/easy_paisa_payment_provider.dart';
+import 'package:pedalduo/providers/activity_provider.dart';
+import 'package:pedalduo/providers/add_players_provider.dart';
+import 'package:pedalduo/providers/auth_provider.dart';
+import 'package:pedalduo/providers/clubs_provider.dart';
+import 'package:pedalduo/providers/connectivity_provider.dart';
+import 'package:pedalduo/providers/highlights_provider.dart';
+import 'package:pedalduo/providers/navigation_provider.dart';
+import 'package:pedalduo/providers/notification_provider.dart';
+import 'package:pedalduo/providers/server_health_provider.dart';
+import 'package:pedalduo/services/connectivity_wrapper.dart';
 import 'package:pedalduo/style/colors.dart';
-import 'package:pedalduo/style/texts.dart';
+import 'package:pedalduo/views/home_screen/views/home_screen.dart';
+import 'package:pedalduo/views/play/providers/brackets_provider.dart';
+import 'package:pedalduo/views/play/providers/matches_provider.dart';
+import 'package:pedalduo/views/play/providers/team_provider.dart';
+import 'package:pedalduo/views/play/providers/tournament_provider.dart';
+import 'package:pedalduo/views/play/providers/user_profile_provider.dart';
+import 'package:pedalduo/views/splash_screen.dart';
+import 'package:provider/provider.dart';
+
+import 'chat/chat_provider.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  FlutterError.onError = (FlutterErrorDetails details) {
+    if (details.exceptionAsString().contains('KeyUpEvent') &&
+        details.exceptionAsString().contains('_pressedKeys.containsKey')) {
+      // Suppress the error for this specific case
+      debugPrint('Suppressed known KeyUpEvent Flutter bug.');
+    } else {
+      FlutterError.presentError(details);
+    }
+  };
+
   runApp(const MyApp());
 }
 
@@ -11,86 +44,37 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-             Text('You have pushed the button this many times:',
-              style: AppTexts.emphasizedTextStyle(context: context, textColor: AppColors.blackColor),),
-            Text(
-              '$_counter',
-              style: AppTexts.bodyTextStyle(context: context, textColor: AppColors.goldColor),
-            ),
-          ],
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => UserAuthProvider()),
+        ChangeNotifierProvider(create: (context) => NavigationProvider()),
+        ChangeNotifierProvider(create: (context) => ActivityProvider()),
+        ChangeNotifierProvider(create: (context) => ClubsProvider()),
+        ChangeNotifierProvider(create: (context) => HighlightsProvider()),
+        ChangeNotifierProvider(create: (context) => ConnectivityProvider()),
+        ChangeNotifierProvider(create: (context) => ServerHealthProvider()),
+        ChangeNotifierProvider(create: (context) => EasyPaisaPaymentProvider()),
+        ChangeNotifierProvider(create: (context) => TournamentProvider()),
+        ChangeNotifierProvider(create: (context) => Brackets()),
+        ChangeNotifierProvider(create: (context) => UserProfileProvider()),
+        ChangeNotifierProvider(create: (context) => TeamProvider()),
+        ChangeNotifierProvider(create: (context) => MatchesProvider()),
+        ChangeNotifierProvider(create: (context) => ChatRoomsProvider()),
+        ChangeNotifierProvider(create: (context) => AddPlayersProvider()),
+        ChangeNotifierProvider(create: (context) => ChatProvider()),
+        ChangeNotifierProvider(create: (context) => NotificationProvider()),
+      ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Flutter Demo',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: AppColors.orangeColor),
         ),
+        builder: (context, child) {
+          return ConnectivityWrapper(child: child ?? const SizedBox());
+        },
+        home: SplashScreen(),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }

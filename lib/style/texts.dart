@@ -16,43 +16,46 @@ class AppTexts {
     final double bodyFontSize = width * 0.032;
     return GoogleFonts.barlow(
       textStyle: Theme.of(context).textTheme.bodySmall!.copyWith(
-          fontSize: fontSize ?? bodyFontSize,
-          decoration: textDecoration ?? TextDecoration.none,
-          decorationColor: decorationColor ?? AppColors.greenColor,
-          color: textColor,
-          fontWeight: fontWeight ?? FontWeight.normal),
+        fontSize: fontSize ?? bodyFontSize,
+        decoration: textDecoration ?? TextDecoration.none,
+        decorationColor: decorationColor ?? AppColors.orangeColor,
+        color: textColor,
+        fontWeight: fontWeight ?? FontWeight.normal,
+      ),
     );
   }
 
-  static TextStyle emphasizedTextStyle(
-      {required BuildContext context,
-      double? fontSize,
-      required Color textColor}) {
+  static TextStyle emphasizedTextStyle({
+    required BuildContext context,
+    double? fontSize,
+    required Color textColor,
+  }) {
     final Size screenSize = MediaQuery.of(context).size;
     final double width = screenSize.width;
     final double headingFontSize = width * 0.034;
     return GoogleFonts.barlowCondensed(
       textStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-            fontSize: fontSize ?? headingFontSize,
-            color: textColor,
-            fontWeight: FontWeight.w600,
-          ),
+        fontSize: fontSize ?? headingFontSize,
+        color: textColor,
+        fontWeight: FontWeight.w600,
+      ),
     );
   }
 
-  static TextStyle headingStyle(
-      {required BuildContext context,
-      required Color textColor,
-      double? fontSize}) {
+  static TextStyle headingStyle({
+    required BuildContext context,
+    required Color textColor,
+    double? fontSize,
+  }) {
     final Size screenSize = MediaQuery.of(context).size;
     final double width = screenSize.width;
     final double headingFontSize = width * 0.15;
     return GoogleFonts.barlowCondensed(
       textStyle: Theme.of(context).textTheme.bodyLarge!.copyWith(
-            fontSize: fontSize ?? headingFontSize,
-            fontWeight: FontWeight.bold,
-            color: textColor,
-          ),
+        fontSize: fontSize ?? headingFontSize,
+        fontWeight: FontWeight.bold,
+        color: textColor,
+      ),
     );
   }
 }

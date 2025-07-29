@@ -13,6 +13,7 @@ import 'package:pedalduo/providers/server_health_provider.dart';
 import 'package:pedalduo/services/connectivity_wrapper.dart';
 import 'package:pedalduo/style/colors.dart';
 import 'package:pedalduo/views/home_screen/views/home_screen.dart';
+import 'package:pedalduo/views/invitation/invitation_provider.dart';
 import 'package:pedalduo/views/play/providers/brackets_provider.dart';
 import 'package:pedalduo/views/play/providers/matches_provider.dart';
 import 'package:pedalduo/views/play/providers/team_provider.dart';
@@ -63,6 +64,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => AddPlayersProvider()),
         ChangeNotifierProvider(create: (context) => ChatProvider()),
         ChangeNotifierProvider(create: (context) => NotificationProvider()),
+        ChangeNotifierProvider(create: (context) => InvitationsProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

@@ -2,12 +2,17 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:pedalduo/services/shared_preference_service.dart';
 import 'package:pedalduo/style/fonts_sizes.dart';
 import 'package:pedalduo/views/all_players.dart';
 import 'package:pedalduo/views/play/views/play_screen.dart';
+import 'package:provider/provider.dart';
 import '../../../../../style/colors.dart';
 import '../../../../../widgets/hero_slider.dart';
+import '../../../../invitation/invitation_screen.dart';
+import '../../../../play/models/my_matches_model.dart';
+import '../../../../play/providers/matches_provider.dart';
 
 class DiscoveryScreen extends StatefulWidget {
   const DiscoveryScreen({super.key});
@@ -41,7 +46,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
           const SizedBox(height: 24),
 
           // Upcoming Matches
-          _buildUpcomingMatches(),
+          _buildUpcomingMatches(context),
         ],
       ),
     );
@@ -70,10 +75,15 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
               const SizedBox(width: 16),
               Expanded(
                 child: _buildGlassCard(
-                  title: 'Tryouts',
-                  icon: Icons.star,
-                  color: AppColors.lightGreenColor,
-                  onTap: () {},
+                  title: 'Invitations',
+                  icon: Icons.inbox_outlined,
+                  color: AppColors.greenColor,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      CupertinoPageRoute(builder: (_) => InvitationsScreen()),
+                    );
+                  },
                 ),
               ),
             ],
@@ -175,55 +185,327 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
     );
   }
 
-  Widget _buildUpcomingMatches() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Upcoming Matches',
-                style: GoogleFonts.barlowCondensed(
-                  fontSize: AppFontSizes(context).size20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.whiteColor,
-                ),
+  Widget _buildUpcomingMatches(BuildContext context) {
+    return Consumer<MatchesProvider>(
+      builder: (context, provider, child) {
+        final upcomingMatches = provider.upcomingMatches;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Upcoming Matches',
+                    style: GoogleFonts.barlowCondensed(
+                      fontSize: AppFontSizes(context).size20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.whiteColor,
+                    ),
+                  ),
+
+                ],
               ),
-              TextButton(
-                onPressed: () {},
-                child: Text(
-                  'See All →',
-                  style: GoogleFonts.barlow(
-                    fontSize: AppFontSizes(context).size14,
-                    color: AppColors.orangeColor,
+            ),
+            const SizedBox(height: 16),
+
+            // Content Section
+            if (provider.isLoading)
+              _buildLoadingState(context)
+            else if (upcomingMatches.isEmpty)
+              _buildEmptyState(context)
+            else
+              _buildUpcomingMatchesList(context, upcomingMatches),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildLoadingState(BuildContext context) {
+    return SizedBox(
+      height: 200,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: 2,
+        itemBuilder: (context, index) {
+          return Container(
+            width: MediaQuery.of(context).size.width * 0.85,
+            margin: EdgeInsets.only(right: index == 1 ? 0 : 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: AppColors.lightNavyBlueGrey.withOpacity(0.3),
+            ),
+            child: const Center(child: CircularProgressIndicator()),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: AppColors.lightNavyBlueGrey.withOpacity(0.3),
+        border: Border.all(
+          color: AppColors.orangeColor.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.event_note, size: 64, color: AppColors.greyColor),
+                const SizedBox(height: 16),
+                Text(
+                  'No Upcoming Matches',
+                  style: GoogleFonts.barlowCondensed(
+                    fontSize: AppFontSizes(context).size18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.whiteColor,
                   ),
                 ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: AppColors.lightNavyBlueGrey.withOpacity(0.8),
-            border: Border.all(
-              color: AppColors.orangeColor.withOpacity(0.3),
-              width: 1,
+                const SizedBox(height: 8),
+                Text(
+                  'There are no scheduled matches at the moment.',
+                  style: GoogleFonts.barlow(
+                    fontSize: AppFontSizes(context).size14,
+                    color: AppColors.greyColor,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUpcomingMatchesList(
+    BuildContext context,
+    List<MyMatchesModel> matches,
+  ) {
+    return SizedBox(
+      height: 280, // Adjusted height
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: matches.length,
+        itemBuilder: (context, index) {
+          final match = matches[index];
+          return Container(
+            width: MediaQuery.of(context).size.width * 0.85,
+            margin: EdgeInsets.only(
+              right: index == matches.length - 1 ? 0 : 16,
+            ),
+            child: _buildUpcomingMatchCard(context, match),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildUpcomingMatchCard(BuildContext context, MyMatchesModel match) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: AppColors.lightNavyBlueGrey.withOpacity(0.8),
+        border: Border.all(
+          color: AppColors.orangeColor.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Tournament Header
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.orangeColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.emoji_events,
+                        size: AppFontSizes(context).size14,
+                        color: AppColors.whiteColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          match.tournament.title,
+                          style: GoogleFonts.barlow(
+                            fontSize: AppFontSizes(context).size12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.whiteColor,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.whiteColor.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          match.roundName,
+                          style: GoogleFonts.barlow(
+                            fontSize: AppFontSizes(context).size10,
+                            color: AppColors.whiteColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Match Number
+                Text(
+                  'Match #${match.matchNumber}',
+                  style: GoogleFonts.barlowCondensed(
+                    fontSize: AppFontSizes(context).size18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.whiteColor,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Teams
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        match.team1.name,
+                        style: GoogleFonts.barlow(
+                          fontSize: AppFontSizes(context).size16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.whiteColor,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.blueColor.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: AppColors.blueColor,
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        'VS',
+                        style: GoogleFonts.barlowCondensed(
+                          fontSize: AppFontSizes(context).size12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.blueColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        match.team2.name,
+                        style: GoogleFonts.barlow(
+                          fontSize: AppFontSizes(context).size16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.whiteColor,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Match Details
+                if (match.matchDate != null) ...[
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.schedule,
+                        size: AppFontSizes(context).size16,
+                        color: AppColors.greyColor,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${DateFormat('MMM dd').format(match.matchDate!)} • ${DateFormat('hh:mm a').format(match.matchDate!)}',
+                        style: GoogleFonts.barlow(
+                          fontSize: AppFontSizes(context).size14,
+                          color: AppColors.greyColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      size: AppFontSizes(context).size16,
+                      color: AppColors.greyColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        match.tournament.location,
+                        style: GoogleFonts.barlow(
+                          fontSize: AppFontSizes(context).size14,
+                          color: AppColors.greyColor,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Bottom Actions
+                Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -231,205 +513,67 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.orangeColor,
+                        color: AppColors.blueColor.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppColors.blueColor,
+                          width: 1,
+                        ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.emoji_events,
-                            size: AppFontSizes(context).size14,
-                            color: AppColors.whiteColor,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Pro Padel League',
-                            style: GoogleFonts.barlow(
-                              fontSize: AppFontSizes(context).size12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.whiteColor,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.whiteColor.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              'Semi Finals',
-                              style: GoogleFonts.barlow(
-                                fontSize: AppFontSizes(context).size10,
-                                color: AppColors.whiteColor,
-                              ),
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        _getMatchStatus(match),
+                        style: GoogleFonts.barlow(
+                          fontSize: AppFontSizes(context).size12,
+                          color: AppColors.blueColor,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Match #2',
-                      style: GoogleFonts.barlowCondensed(
-                        fontSize: AppFontSizes(context).size18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.whiteColor,
+                    const Spacer(),
+                    OutlinedButton(
+                      onPressed: () {
+                        // Navigate to match details
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: AppColors.orangeColor),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Text(
-                          'Tanveer Team',
-                          style: GoogleFonts.barlow(
-                            fontSize: AppFontSizes(context).size16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.whiteColor,
-                          ),
+                      child: Text(
+                        'View Details',
+                        style: GoogleFonts.barlow(
+                          fontSize: AppFontSizes(context).size14,
+                          color: AppColors.orangeColor,
                         ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.blueColor.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: AppColors.blueColor,
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            'VS',
-                            style: GoogleFonts.barlowCondensed(
-                              fontSize: AppFontSizes(context).size12,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.blueColor,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Saud Team',
-                          style: GoogleFonts.barlow(
-                            fontSize: AppFontSizes(context).size16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.whiteColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.schedule,
-                          size: AppFontSizes(context).size16,
-                          color: AppColors.greyColor,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Tomorrow • 12:30 am',
-                          style: GoogleFonts.barlow(
-                            fontSize: AppFontSizes(context).size14,
-                            color: AppColors.greyColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          size: AppFontSizes(context).size16,
-                          color: AppColors.greyColor,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Raiwind, Lahore',
-                          style: GoogleFonts.barlow(
-                            fontSize: AppFontSizes(context).size14,
-                            color: AppColors.greyColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.person,
-                          size: AppFontSizes(context).size16,
-                          color: AppColors.greyColor,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'by Tanveer',
-                          style: GoogleFonts.barlow(
-                            fontSize: AppFontSizes(context).size14,
-                            color: AppColors.greyColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.blueColor.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: AppColors.blueColor,
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            'Bracket Scheduled',
-                            style: GoogleFonts.barlow(
-                              fontSize: AppFontSizes(context).size12,
-                              color: AppColors.blueColor,
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                        OutlinedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: AppColors.orangeColor),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text(
-                            'View Details',
-                            style: GoogleFonts.barlow(
-                              fontSize: AppFontSizes(context).size14,
-                              color: AppColors.orangeColor,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
-              ),
+              ],
             ),
           ),
         ),
-      ],
+      ),
     );
+  }
+
+  String _getMatchStatus(MyMatchesModel match) {
+    // You can customize this based on your match status logic
+    if (match.matchDate != null) {
+      final now = DateTime.now();
+      final matchDate = match.matchDate!;
+
+      if (matchDate.isAfter(now)) {
+        final difference = matchDate.difference(now);
+        if (difference.inDays > 0) {
+          return 'In ${difference.inDays} days';
+        } else if (difference.inHours > 0) {
+          return 'In ${difference.inHours} hours';
+        } else {
+          return 'Starting soon';
+        }
+      }
+    }
+    return 'Bracket Scheduled';
   }
 }

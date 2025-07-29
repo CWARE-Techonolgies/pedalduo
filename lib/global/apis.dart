@@ -22,6 +22,10 @@ class AppApis {
       '${baseUrl}subscriptions/topics/unsubscribe';
   static const String getNotificationPreferences =
       '${baseUrl}notifications/preferences';
+  static const String sentInvitations =
+      '${baseUrl}my-sent-invitations';
+  static const String recievedInvitations =
+      '${baseUrl}my-received-invitations';
 
   ///////chats
   static const String chatRooms = '${chatBaseUrl}api/chat/rooms';

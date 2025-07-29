@@ -921,6 +921,8 @@ class _TournamentsTabState extends State<TournamentsTab> {
                                 tournament.title,
                                 tournament.winnerTeamId,
                                 tournament.status,
+                                tournament.tournamentStartDate,
+                                tournament.tournamentEndDate,
                               );
                             },
                             child: Container(
@@ -1542,6 +1544,8 @@ class _TournamentsTabState extends State<TournamentsTab> {
                                         tournament.title,
                                         tournament.winnerTeamId,
                                         tournament.status,
+                                        tournament.tournamentStartDate,
+                                        tournament.tournamentEndDate,
                                       );
                                     },
                                     child: Container(

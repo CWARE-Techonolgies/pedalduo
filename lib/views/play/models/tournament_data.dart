@@ -46,9 +46,9 @@ class TournamentRound {
       roundNumber: json['round_number'] ?? 0,
       roundName: json['round_name'] ?? '',
       matches:
-      (json['matches'] as List?)
-          ?.map((match) => MyMatch.fromJson(match))
-          .toList() ??
+          (json['matches'] as List?)
+              ?.map((match) => MyMatch.fromJson(match))
+              .toList() ??
           [],
     );
   }
@@ -60,6 +60,7 @@ class MyMatch {
   final int roundNumber;
   final String roundName;
   final int matchNumber;
+  final String matchType;
   final int team1Id;
   final int team2Id;
   final int? winnerTeamId;
@@ -81,6 +82,7 @@ class MyMatch {
     required this.roundNumber,
     required this.roundName,
     required this.matchNumber,
+    required this.matchType,
     required this.team1Id,
     required this.team2Id,
     this.winnerTeamId,
@@ -103,6 +105,7 @@ class MyMatch {
       tournamentId: json['tournament_id'] ?? 0,
       roundNumber: json['round_number'] ?? 0,
       roundName: json['round_name'] ?? '',
+      matchType: json['match_type'] ?? '',
       matchNumber: json['match_number'] ?? 0,
       team1Id: json['team1_id'] ?? 0,
       team2Id: json['team2_id'] ?? 0,

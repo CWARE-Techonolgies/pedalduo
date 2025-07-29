@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -22,41 +23,47 @@ class Brackets extends ChangeNotifier {
   String? get error => _error;
 
   Future<void> showTournamentBrackets(
-      BuildContext context,
-      dynamic tournament,
-      TournamentProvider provider,
-      bool isOrganizer,
-      String tournamentId,
-      String tournamentName,
-      int? winnerTeamId,
-      String tournamentStatus,
-      ) async {
-    print('Showing brackets for tournament: ${tournament.id}');
+    BuildContext context,
+    dynamic tournament,
+    TournamentProvider provider,
+    bool isOrganizer,
+    String tournamentId,
+    String tournamentName,
+    int? winnerTeamId,
+    String tournamentStatus,
+    DateTime tournamentStartDate,
+    DateTime tournamentEndDate,
+  ) async {
+    if (kDebugMode) {
+      print('Showing brackets for tournament: ${tournament.id}');
+    }
     _navigateToBracketsView(
-        context,
-        tournament,
-        isOrganizer,
-        tournamentId,
-        tournamentName,
-        winnerTeamId ?? null,
-        tournamentStatus
+      context,
+      tournament,
+      isOrganizer,
+      tournamentId,
+      tournamentName,
+      winnerTeamId,
+      tournamentStatus,
+      tournamentStartDate,
+      tournamentEndDate,
     );
   }
 
   Future<void> generateTournamentBrackets(
-      BuildContext context,
-      dynamic tournament,
-      TournamentProvider provider,
-      ) async {
+    BuildContext context,
+    dynamic tournament,
+    TournamentProvider provider,
+  ) async {
     // Generate new brackets
     await _generateBrackets(context, tournament, provider);
   }
 
   Future<void> _generateBrackets(
-      BuildContext context,
-      dynamic tournament,
-      TournamentProvider provider,
-      ) async {
+    BuildContext context,
+    dynamic tournament,
+    TournamentProvider provider,
+  ) async {
     try {
       _isGeneratingBrackets = true;
       notifyListeners();
@@ -114,25 +121,29 @@ class Brackets extends ChangeNotifier {
   }
 
   void _navigateToBracketsView(
-      BuildContext context,
-      dynamic tournament,
-      bool isOrganizer,
-      final String tournamentId,
-      final String tournamentName,
-      int? winnerTeamId,
-      final String tournamentStatus,
-      ) {
+    BuildContext context,
+    dynamic tournament,
+    bool isOrganizer,
+    final String tournamentId,
+    final String tournamentName,
+    int? winnerTeamId,
+    final String tournamentStatus,
+    final DateTime tournamentStartDate,
+    final DateTime tournamentEndDate,
+  ) {
     Navigator.push(
       context,
       CupertinoPageRoute(
         builder:
             (_) => AllBracketsViews(
-          isOrganizer: isOrganizer,
-          tournamentId: tournamentId,
-          tournamentName: tournamentName,
-          tournamentStatus:tournamentStatus,
-          winnerTeamId: winnerTeamId,
-        ),
+              isOrganizer: isOrganizer,
+              tournamentId: tournamentId,
+              tournamentName: tournamentName,
+              tournamentStatus: tournamentStatus,
+              winnerTeamId: winnerTeamId,
+              tournamentEndDate: tournamentEndDate,
+              tournamentStartDate: tournamentStartDate,
+            ),
       ),
     );
   }
@@ -158,6 +169,7 @@ class Brackets extends ChangeNotifier {
       }
     } catch (e) {
       _error = 'Network error: $e';
+      print(_error);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -165,10 +177,11 @@ class Brackets extends ChangeNotifier {
   }
 
   Future<bool> scheduleMatch(
-      int matchId,
-      String matchDate,
-      String tournamentId,
-      ) async {
+    int matchId,
+    String matchDate,
+    String tournamentId,
+    String matchType,
+  ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
@@ -179,7 +192,7 @@ class Brackets extends ChangeNotifier {
         return false;
       }
 
-      final request = ScheduleMatchRequest(matchDate: matchDate);
+      final request = {"match_date": matchDate, "match_type": matchType};
 
       final response = await http.put(
         Uri.parse(
@@ -189,7 +202,7 @@ class Brackets extends ChangeNotifier {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: json.encode(request.toJson()),
+        body: json.encode(request),
       );
 
       if (response.statusCode == 200) {
@@ -209,10 +222,10 @@ class Brackets extends ChangeNotifier {
   }
 
   Future<bool> updateMatchScore(
-      int matchId,
-      UpdateScoreRequest request,
-      String tournamentId,
-      ) async {
+    int matchId,
+    UpdateScoreRequest request,
+    String tournamentId,
+  ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
@@ -258,7 +271,7 @@ class Brackets extends ChangeNotifier {
     if (rounds.isEmpty) return false;
 
     final latestRound = rounds.reduce(
-          (a, b) => a.roundNumber > b.roundNumber ? a : b,
+      (a, b) => a.roundNumber > b.roundNumber ? a : b,
     );
     return latestRound.matches.every((match) => match.isCompleted);
   }
@@ -277,9 +290,9 @@ class Brackets extends ChangeNotifier {
   }
 
   Future<void> generateNextRound(
-      String tournamentId,
-      BuildContext context,
-      ) async {
+    String tournamentId,
+    BuildContext context,
+  ) async {
     _nextRoundLoading = true;
     notifyListeners();
 

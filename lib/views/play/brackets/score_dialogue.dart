@@ -118,10 +118,7 @@ class _ScoreScreenState extends State<ScoreScreen>
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: child,
-      ),
+      child: ClipRRect(borderRadius: BorderRadius.circular(20), child: child),
     );
   }
 
@@ -322,11 +319,11 @@ class _ScoreScreenState extends State<ScoreScreen>
   }
 
   Widget _buildTeamScoreCard(
-      Team team,
-      TextEditingController controller,
-      bool noShow, {
-        required bool isFirst,
-      }) {
+    Team team,
+    TextEditingController controller,
+    bool noShow, {
+    required bool isFirst,
+  }) {
     return _glassMorphContainer(
       opacity: 0.12,
       child: Container(
@@ -467,7 +464,7 @@ class _ScoreScreenState extends State<ScoreScreen>
             _buildNoShowCheckbox(
               '${widget.match.team1.name} no show',
               _team1NoShow && !_bothNoShow,
-                  (value) {
+              (value) {
                 setState(() {
                   _team1NoShow = value ?? false;
                   if (_team1NoShow) {
@@ -482,7 +479,7 @@ class _ScoreScreenState extends State<ScoreScreen>
             _buildNoShowCheckbox(
               '${widget.match.team2.name} no show',
               _team2NoShow && !_bothNoShow,
-                  (value) {
+              (value) {
                 setState(() {
                   _team2NoShow = value ?? false;
                   if (_team2NoShow) {
@@ -500,17 +497,18 @@ class _ScoreScreenState extends State<ScoreScreen>
   }
 
   Widget _buildNoShowCheckbox(
-      String title,
-      bool value,
-      Function(bool?) onChanged, {
-        bool enabled = true,
-      }) {
+    String title,
+    bool value,
+    Function(bool?) onChanged, {
+    bool enabled = true,
+  }) {
     return GestureDetector(
       onTap: enabled ? () => onChanged(!value) : null,
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: value ? AppColors.redColor.withOpacity(0.2) : Colors.transparent,
+          color:
+              value ? AppColors.redColor.withOpacity(0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -526,9 +524,10 @@ class _ScoreScreenState extends State<ScoreScreen>
                   width: 2,
                 ),
               ),
-              child: value
-                  ? const Icon(Icons.check, color: Colors.white, size: 14)
-                  : null,
+              child:
+                  value
+                      ? const Icon(Icons.check, color: Colors.white, size: 14)
+                      : null,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -550,9 +549,10 @@ class _ScoreScreenState extends State<ScoreScreen>
   Widget _buildWinnerSection() {
     return _glassMorphContainer(
       opacity: 0.12,
-      borderColor: _winnerTeam != null
-          ? AppColors.greenColor.withOpacity(0.5)
-          : Colors.white.withOpacity(0.2),
+      borderColor:
+          _winnerTeam != null
+              ? AppColors.greenColor.withOpacity(0.5)
+              : Colors.white.withOpacity(0.2),
       child: Container(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -562,13 +562,16 @@ class _ScoreScreenState extends State<ScoreScreen>
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: _winnerTeam != null
-                        ? AppColors.greenColor.withOpacity(0.8)
-                        : Colors.white.withOpacity(0.2),
+                    color:
+                        _winnerTeam != null
+                            ? AppColors.greenColor.withOpacity(0.8)
+                            : Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    _winnerTeam != null ? Icons.emoji_events : Icons.help_outline,
+                    _winnerTeam != null
+                        ? Icons.emoji_events
+                        : Icons.help_outline,
                     color: Colors.white,
                     size: 24,
                   ),
@@ -592,7 +595,10 @@ class _ScoreScreenState extends State<ScoreScreen>
                         _winnerTeam?.name ?? 'To Be Determined',
                         style: AppTexts.emphasizedTextStyle(
                           context: context,
-                          textColor: _winnerTeam != null ? Colors.white : Colors.white54,
+                          textColor:
+                              _winnerTeam != null
+                                  ? Colors.white
+                                  : Colors.white54,
                           fontSize: AppFontSizes(context).size20,
                         ),
                       ),
@@ -675,9 +681,7 @@ class _ScoreScreenState extends State<ScoreScreen>
   Widget _buildActionButtons() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-      ),
+      decoration: BoxDecoration(color: Colors.transparent),
       child: Row(
         children: [
           Expanded(
@@ -709,27 +713,29 @@ class _ScoreScreenState extends State<ScoreScreen>
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
-                  gradient: _canSubmit()
-                      ? LinearGradient(
-                    colors: [
-                      AppColors.greenColor,
-                      AppColors.lightOrangeColor,
-                    ],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  )
-                      : null,
+                  gradient:
+                      _canSubmit()
+                          ? LinearGradient(
+                            colors: [
+                              AppColors.greenColor,
+                              AppColors.lightOrangeColor,
+                            ],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          )
+                          : null,
                   color: _canSubmit() ? null : Colors.white.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: _canSubmit()
-                      ? [
-                    BoxShadow(
-                      color: AppColors.greenColor.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                      : null,
+                  boxShadow:
+                      _canSubmit()
+                          ? [
+                            BoxShadow(
+                              color: AppColors.greenColor.withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ]
+                          : null,
                 ),
                 child: Center(
                   child: Text(

@@ -1,13 +1,12 @@
 import 'dart:ui';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:pedalduo/views/play/brackets/schedule_match_dialogue.dart';
 import 'package:pedalduo/views/play/brackets/score_dialogue.dart';
 import 'package:pedalduo/views/play/brackets/winner_team_dialogue.dart';
 import 'package:provider/provider.dart';
 import 'package:skeletonizer/skeletonizer.dart';
-import 'package:intl/intl.dart';
-
 import '../../../style/colors.dart';
 import '../../../style/fonts_sizes.dart';
 import '../../../style/texts.dart';
@@ -20,6 +19,8 @@ class AllBracketsViews extends StatefulWidget {
   final String tournamentId;
   final String tournamentName;
   final String tournamentStatus;
+  final DateTime tournamentStartDate;
+  final DateTime tournamentEndDate;
   final int? winnerTeamId;
   const AllBracketsViews({
     super.key,
@@ -27,6 +28,8 @@ class AllBracketsViews extends StatefulWidget {
     required this.tournamentId,
     required this.tournamentName,
     required this.tournamentStatus,
+    required this.tournamentEndDate,
+    required this.tournamentStartDate,
     this.winnerTeamId,
   });
 
@@ -76,7 +79,7 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
     if (!latestRound.roundName.toLowerCase().contains('final')) return null;
 
     final finalMatch = latestRound.matches.firstWhere(
-          (match) => match.isCompleted,
+      (match) => match.isCompleted,
       orElse: () => latestRound.matches.first,
     );
 
@@ -102,10 +105,11 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => WinnerDialog(
-          winnerTeam: winnerTeam,
-          onClose: () => Navigator.of(context).pop(),
-        ),
+        builder:
+            (context) => WinnerDialog(
+              winnerTeam: winnerTeam,
+              onClose: () => Navigator.of(context).pop(),
+            ),
       );
     }
   }
@@ -113,7 +117,9 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
   @override
   void initState() {
     super.initState();
-
+    if (kDebugMode) {
+      print('id: ${widget.tournamentId}');
+    }
     // Initialize animations
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -124,20 +130,24 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOut));
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.elasticOut));
+    ).animate(
+      CurvedAnimation(parent: _slideController, curve: Curves.elasticOut),
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<Brackets>().fetchTournamentData(widget.tournamentId);
       _fadeController.forward();
       _slideController.forward();
 
-      if (widget.tournamentStatus == 'Completed' && widget.winnerTeamId != null) {
+      if (widget.tournamentStatus == 'Completed' &&
+          widget.winnerTeamId != null) {
         Future.delayed(const Duration(milliseconds: 1200), () {
           if (mounted) {
             _showWinnerDialog();
@@ -210,16 +220,10 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              AppColors.glassLightColor,
-              AppColors.glassColor,
-            ],
+            colors: [AppColors.glassLightColor, AppColors.glassColor],
           ),
           border: Border(
-            bottom: BorderSide(
-              color: AppColors.glassBorderColor,
-              width: 0.5,
-            ),
+            bottom: BorderSide(color: AppColors.glassBorderColor, width: 0.5),
           ),
         ),
         child: ClipRRect(
@@ -261,7 +265,9 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
                 onTap: () {
-                  context.read<Brackets>().fetchTournamentData(widget.tournamentId);
+                  context.read<Brackets>().fetchTournamentData(
+                    widget.tournamentId,
+                  );
                 },
                 child: const Padding(
                   padding: EdgeInsets.all(12),
@@ -371,7 +377,9 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
               const SizedBox(height: 32),
               _buildGlassButton(
                 onPressed: () {
-                  context.read<Brackets>().fetchTournamentData(widget.tournamentId);
+                  context.read<Brackets>().fetchTournamentData(
+                    widget.tournamentId,
+                  );
                 },
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -458,7 +466,12 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
       children: [
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.only(top: 120, left: 20, right: 20, bottom: 20),
+            padding: const EdgeInsets.only(
+              top: 120,
+              left: 20,
+              right: 20,
+              bottom: 20,
+            ),
             itemCount: rounds.length,
             itemBuilder: (context, index) {
               return TweenAnimationBuilder<double>(
@@ -485,7 +498,11 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
     );
   }
 
-  Widget _buildRoundSection(TournamentRound round, Brackets provider, int index) {
+  Widget _buildRoundSection(
+    TournamentRound round,
+    Brackets provider,
+    int index,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
       child: Column(
@@ -497,8 +514,10 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppColors.accentGradient[index % AppColors.accentGradient.length],
-                  AppColors.accentGradient[(index + 1) % AppColors.accentGradient.length],
+                  AppColors.accentGradient[index %
+                      AppColors.accentGradient.length],
+                  AppColors.accentGradient[(index + 1) %
+                      AppColors.accentGradient.length],
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -507,7 +526,8 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
               border: Border.all(color: AppColors.glassBorderColor, width: 0.5),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.accentGradient[index % AppColors.accentGradient.length]
+                  color: AppColors
+                      .accentGradient[index % AppColors.accentGradient.length]
                       .withOpacity(0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
@@ -546,7 +566,9 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
                         'Round ${round.roundNumber}',
                         style: AppTexts.bodyTextStyle(
                           context: context,
-                          textColor: AppColors.textPrimaryColor.withOpacity(0.8),
+                          textColor: AppColors.textPrimaryColor.withOpacity(
+                            0.8,
+                          ),
                           fontSize: AppFontSizes(context).size14,
                         ),
                       ),
@@ -554,7 +576,10 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.glassLightColor,
                     borderRadius: BorderRadius.circular(20),
@@ -573,24 +598,30 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
             ),
           ),
           const SizedBox(height: 16),
-          ...round.matches.asMap().entries.map(
-                (entry) {
-              final matchIndex = entry.key;
-              final match = entry.value;
-              return TweenAnimationBuilder<double>(
-                duration: Duration(milliseconds: 600 + (matchIndex * 100)),
-                tween: Tween(begin: 0.0, end: 1.0),
-                builder: (context, value, child) {
-                  return MatchCardInBracketsView(
-                    match: match,
-                    isOrganizer: widget.isOrganizer,
-                    onScheduleMatch: _scheduleMatch,
-                    onUpdateScore: _updateScore,
-                  );
-                },
-              );
-            },
-          ),
+          ...round.matches.asMap().entries.map((entry) {
+            final matchIndex = entry.key;
+            final match = entry.value;
+            return TweenAnimationBuilder<double>(
+              duration: Duration(milliseconds: 600 + (matchIndex * 100)),
+              tween: Tween(begin: 0.0, end: 1.0),
+              builder: (context, value, child) {
+                return MatchCardInBracketsView(
+                  match: match,
+                  isOrganizer: widget.isOrganizer,
+                  onScheduleMatch:
+                      (match) => showScheduleMatchDialog(
+                        context,
+                        match,
+                        widget.tournamentId,
+                        widget.tournamentStartDate,
+                        widget.tournamentEndDate,
+                      ),
+                  onUpdateScore: _updateScore,
+                );
+                ;
+              },
+            );
+          }),
         ],
       ),
     );
@@ -616,51 +647,63 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                onTap: isFinal && isFinalCompleted
-                    ? () => Navigator.of(context).pop()
-                    : provider.canGenerateNextRound()
-                    ? () => provider.generateNextRound(widget.tournamentId, context)
-                    : null,
+                onTap:
+                    isFinal && isFinalCompleted
+                        ? () => Navigator.of(context).pop()
+                        : provider.canGenerateNextRound()
+                        ? () => provider.generateNextRound(
+                          widget.tournamentId,
+                          context,
+                        )
+                        : null,
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: isFinal && isFinalCompleted
-                          ? [AppColors.errorColor, AppColors.errorColor.withOpacity(0.8)]
-                          : [AppColors.primaryColor, AppColors.primaryLightColor],
+                      colors:
+                          isFinal && isFinalCompleted
+                              ? [
+                                AppColors.errorColor,
+                                AppColors.errorColor.withOpacity(0.8),
+                              ]
+                              : [
+                                AppColors.primaryColor,
+                                AppColors.primaryLightColor,
+                              ],
                     ),
                   ),
-                  child: provider.nextRoundLoading
-                      ? SizedBox(
-                    height: 24,
-                    child: SpinKitThreeBounce(
-                      color: AppColors.textPrimaryColor,
-                      size: 20,
-                    ),
-                  )
-                      : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        isFinal && isFinalCompleted
-                            ? Icons.close_rounded
-                            : Icons.refresh_rounded,
-                        size: 24,
-                        color: AppColors.textPrimaryColor,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        isFinal && isFinalCompleted
-                            ? 'Close Tournament'
-                            : 'Generate Next Round',
-                        style: AppTexts.emphasizedTextStyle(
-                          context: context,
-                          textColor: AppColors.textPrimaryColor,
-                          fontSize: AppFontSizes(context).size16,
-                        ),
-                      ),
-                    ],
-                  ),
+                  child:
+                      provider.nextRoundLoading
+                          ? SizedBox(
+                            height: 24,
+                            child: SpinKitThreeBounce(
+                              color: AppColors.textPrimaryColor,
+                              size: 20,
+                            ),
+                          )
+                          : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                isFinal && isFinalCompleted
+                                    ? Icons.close_rounded
+                                    : Icons.refresh_rounded,
+                                size: 24,
+                                color: AppColors.textPrimaryColor,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                isFinal && isFinalCompleted
+                                    ? 'Close Tournament'
+                                    : 'Generate Next Round',
+                                style: AppTexts.emphasizedTextStyle(
+                                  context: context,
+                                  textColor: AppColors.textPrimaryColor,
+                                  fontSize: AppFontSizes(context).size16,
+                                ),
+                              ),
+                            ],
+                          ),
                 ),
               ),
             ),
@@ -693,7 +736,10 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
             child: InkWell(
               onTap: onPressed,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 child: child,
               ),
             ),
@@ -703,95 +749,23 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
     );
   }
 
-  Future<void> _scheduleMatch(MyMatch match) async {
-    final DateTime? selectedDate = await showDatePicker(
+  void showScheduleMatchDialog(
+    BuildContext context,
+    MyMatch match,
+    String tournamentId,
+    DateTime tournamentStartDate,
+    DateTime tournamentEndDate,
+  ) {
+    showDialog(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: AppColors.primaryColor,
-              surface: AppColors.darkSecondaryColor,
-            ),
+      builder:
+          (context) => ScheduleMatchDialog(
+            match: match,
+            tournamentId: tournamentId,
+            tournamentStartDate: tournamentStartDate,
+            tournamentEndDate: tournamentEndDate,
           ),
-          child: child!,
-        );
-      },
     );
-
-    if (selectedDate != null) {
-      final TimeOfDay? selectedTime = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.now(),
-        builder: (context, child) {
-          return Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: Theme.of(context).colorScheme.copyWith(
-                primary: AppColors.primaryColor,
-                surface: AppColors.darkSecondaryColor,
-              ),
-            ),
-            child: child!,
-          );
-        },
-      );
-
-      if (selectedTime != null) {
-        final DateTime combinedDateTime = DateTime(
-          selectedDate.year,
-          selectedDate.month,
-          selectedDate.day,
-          selectedTime.hour,
-          selectedTime.minute,
-        );
-
-        final String formattedDate = DateFormat(
-          "yyyy-MM-dd'T'HH:mm:ss'Z'",
-        ).format(combinedDateTime.toUtc());
-
-        final success = await context.read<Brackets>().scheduleMatch(
-          match.id,
-          formattedDate,
-          widget.tournamentId,
-        );
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.glassColor,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Text(
-                        success
-                            ? 'Match scheduled successfully'
-                            : 'Failed to schedule match',
-                        style: AppTexts.bodyTextStyle(
-                          context: context,
-                          textColor: AppColors.textPrimaryColor,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-            ),
-          );
-        }
-      }
-    }
   }
 
   Future<void> _updateScore(MyMatch match) async {

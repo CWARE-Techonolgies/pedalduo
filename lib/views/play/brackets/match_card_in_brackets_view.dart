@@ -27,7 +27,9 @@ class MatchCardInBracketsView extends StatelessWidget {
       child: Column(
         children: [
           _buildMatchHeader(context),
-          match.isCompleted ? _buildWinnerSection(context) : _buildTeamsSection(context),
+          match.isCompleted
+              ? _buildWinnerSection(context)
+              : _buildTeamsSection(context),
           if (match.matchDate != null) _buildDateInfo(context),
           if (isOrganizer && !match.isCompleted) _buildActionButtons(context),
         ],
@@ -38,10 +40,7 @@ class MatchCardInBracketsView extends StatelessWidget {
   BoxDecoration _buildGlassDecoration() {
     return BoxDecoration(
       gradient: LinearGradient(
-        colors: [
-          AppColors.glassLightColor,
-          AppColors.glassColor,
-        ],
+        colors: [AppColors.glassLightColor, AppColors.glassColor],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
@@ -49,7 +48,10 @@ class MatchCardInBracketsView extends StatelessWidget {
       border: Border.all(color: AppColors.glassBorderColor, width: 1.5),
       boxShadow: [
         BoxShadow(
-          color: match.isCompleted ? AppColors.successColor.withOpacity(0.3) : AppColors.darkTertiaryColor.withOpacity(0.2),
+          color:
+              match.isCompleted
+                  ? AppColors.successColor.withOpacity(0.3)
+                  : AppColors.darkTertiaryColor.withOpacity(0.2),
           blurRadius: match.isCompleted ? 25 : 15,
           offset: const Offset(0, 8),
           spreadRadius: match.isCompleted ? 3 : 1,
@@ -63,20 +65,24 @@ class MatchCardInBracketsView extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: match.isCompleted
-              ? [AppColors.successColor.withOpacity(0.3), AppColors.primaryColor.withOpacity(0.2)]
-              : [AppColors.darkSecondaryColor, AppColors.darkTertiaryColor],
+          colors:
+              match.isCompleted
+                  ? [
+                    AppColors.successColor.withOpacity(0.3),
+                    AppColors.primaryColor.withOpacity(0.2),
+                  ]
+                  : [AppColors.darkSecondaryColor, AppColors.darkTertiaryColor],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildMatchNumberChip(context),
-          _buildStatusChip(context),
-        ],
+        children: [_buildMatchNumberChip(context), _buildStatusChip(context)],
       ),
     );
   }
@@ -106,9 +112,10 @@ class MatchCardInBracketsView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: match.isCompleted
-              ? [AppColors.successColor, AppColors.accentCyanColor]
-              : [_getStatusColor(), _getStatusColor().withOpacity(0.7)],
+          colors:
+              match.isCompleted
+                  ? [AppColors.successColor, AppColors.accentCyanColor]
+                  : [_getStatusColor(), _getStatusColor().withOpacity(0.7)],
         ),
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
@@ -140,9 +147,16 @@ class MatchCardInBracketsView extends StatelessWidget {
 
   Widget _buildWinnerSection(BuildContext context) {
     final winner = match.winnerTeam;
-    final loser = match.winnerTeamId == match.team1Id ? match.team2 : match.team1;
-    final winnerScore = match.winnerTeamId == match.team1Id ? match.team1Score : match.team2Score;
-    final loserScore = match.winnerTeamId == match.team1Id ? match.team2Score : match.team1Score;
+    final loser =
+        match.winnerTeamId == match.team1Id ? match.team2 : match.team1;
+    final winnerScore =
+        match.winnerTeamId == match.team1Id
+            ? match.team1Score
+            : match.team2Score;
+    final loserScore =
+        match.winnerTeamId == match.team1Id
+            ? match.team2Score
+            : match.team1Score;
 
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -161,12 +175,18 @@ class MatchCardInBracketsView extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.successColor.withOpacity(0.3), AppColors.accentCyanColor.withOpacity(0.2)],
+          colors: [
+            AppColors.successColor.withOpacity(0.3),
+            AppColors.accentCyanColor.withOpacity(0.2),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.successColor.withOpacity(0.5), width: 2),
+        border: Border.all(
+          color: AppColors.successColor.withOpacity(0.5),
+          width: 2,
+        ),
         boxShadow: [
           BoxShadow(
             color: AppColors.successColor.withOpacity(0.3),
@@ -185,7 +205,11 @@ class MatchCardInBracketsView extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.emoji_events, color: AppColors.warningColor, size: 20),
+                    Icon(
+                      Icons.emoji_events,
+                      color: AppColors.warningColor,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'WINNER',
@@ -254,7 +278,9 @@ class MatchCardInBracketsView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
         children: [
-          Expanded(child: Container(height: 1, color: AppColors.glassBorderColor)),
+          Expanded(
+            child: Container(height: 1, color: AppColors.glassBorderColor),
+          ),
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -273,7 +299,9 @@ class MatchCardInBracketsView extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(child: Container(height: 1, color: AppColors.glassBorderColor)),
+          Expanded(
+            child: Container(height: 1, color: AppColors.glassBorderColor),
+          ),
         ],
       ),
     );
@@ -298,7 +326,9 @@ class MatchCardInBracketsView extends StatelessWidget {
             ),
             child: Center(
               child: Text(
-                loser?.name?.isNotEmpty == true ? loser!.name[0].toUpperCase() : 'L',
+                loser?.name?.isNotEmpty == true
+                    ? loser!.name[0].toUpperCase()
+                    : 'L',
                 style: AppTexts.bodyTextStyle(
                   context: context,
                   textColor: AppColors.textPrimaryColor,
@@ -331,25 +361,54 @@ class MatchCardInBracketsView extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          _buildTeamRow(context, match.team1, match.team1Score, match.team1NoShow, match.winnerTeamId == match.team1Id),
+          _buildTeamRow(
+            context,
+            match.team1,
+            match.team1Score,
+            match.team1NoShow,
+            match.winnerTeamId == match.team1Id,
+          ),
           const SizedBox(height: 12),
           _buildVSDivider(context),
-          _buildTeamRow(context, match.team2, match.team2Score, match.team2NoShow, match.winnerTeamId == match.team2Id),
+          _buildTeamRow(
+            context,
+            match.team2,
+            match.team2Score,
+            match.team2NoShow,
+            match.winnerTeamId == match.team2Id,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTeamRow(BuildContext context, Team team, String? score, bool noShow, bool isWinner) {
+  Widget _buildTeamRow(
+    BuildContext context,
+    Team team,
+    String? score,
+    bool noShow,
+    bool isWinner,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: isWinner
-            ? LinearGradient(colors: [AppColors.successColor.withOpacity(0.2), AppColors.glassColor])
-            : LinearGradient(colors: [AppColors.glassColor, AppColors.glassLightColor]),
+        gradient:
+            isWinner
+                ? LinearGradient(
+                  colors: [
+                    AppColors.successColor.withOpacity(0.2),
+                    AppColors.glassColor,
+                  ],
+                )
+                : LinearGradient(
+                  colors: [AppColors.glassColor, AppColors.glassLightColor],
+                ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isWinner ? AppColors.successColor.withOpacity(0.6) : AppColors.glassBorderColor,
+          color:
+              isWinner
+                  ? AppColors.successColor.withOpacity(0.6)
+                  : AppColors.glassBorderColor,
           width: isWinner ? 2 : 1,
         ),
       ),
@@ -359,9 +418,17 @@ class MatchCardInBracketsView extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              gradient: isWinner
-                  ? LinearGradient(colors: [AppColors.successColor, AppColors.accentCyanColor])
-                  : LinearGradient(colors: [AppColors.darkGreyColor, AppColors.greyColor]),
+              gradient:
+                  isWinner
+                      ? LinearGradient(
+                        colors: [
+                          AppColors.successColor,
+                          AppColors.accentCyanColor,
+                        ],
+                      )
+                      : LinearGradient(
+                        colors: [AppColors.darkGreyColor, AppColors.greyColor],
+                      ),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Center(
@@ -412,13 +479,19 @@ class MatchCardInBracketsView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        gradient: isWinner
-            ? LinearGradient(colors: [AppColors.successColor, AppColors.accentCyanColor])
-            : LinearGradient(colors: [AppColors.darkGreyColor, AppColors.greyColor]),
+        gradient:
+            isWinner
+                ? LinearGradient(
+                  colors: [AppColors.successColor, AppColors.accentCyanColor],
+                )
+                : LinearGradient(
+                  colors: [AppColors.darkGreyColor, AppColors.greyColor],
+                ),
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: (isWinner ? AppColors.successColor : AppColors.darkGreyColor).withOpacity(0.3),
+            color: (isWinner ? AppColors.successColor : AppColors.darkGreyColor)
+                .withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -440,7 +513,9 @@ class MatchCardInBracketsView extends StatelessWidget {
       margin: const EdgeInsets.only(left: 8),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [AppColors.warningColor, AppColors.primaryColor]),
+        gradient: LinearGradient(
+          colors: [AppColors.warningColor, AppColors.primaryColor],
+        ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -450,7 +525,11 @@ class MatchCardInBracketsView extends StatelessWidget {
           ),
         ],
       ),
-      child: Icon(Icons.emoji_events, color: AppColors.textPrimaryColor, size: 16),
+      child: Icon(
+        Icons.emoji_events,
+        color: AppColors.textPrimaryColor,
+        size: 16,
+      ),
     );
   }
 
@@ -465,13 +544,23 @@ class MatchCardInBracketsView extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: isCompleted
-              ? [AppColors.successColor.withOpacity(0.2), AppColors.glassColor]
-              : [AppColors.accentBlueColor.withOpacity(0.2), AppColors.glassColor],
+          colors:
+              isCompleted
+                  ? [
+                    AppColors.successColor.withOpacity(0.2),
+                    AppColors.glassColor,
+                  ]
+                  : [
+                    AppColors.accentBlueColor.withOpacity(0.2),
+                    AppColors.glassColor,
+                  ],
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isCompleted ? AppColors.successColor.withOpacity(0.5) : AppColors.accentBlueColor.withOpacity(0.5),
+          color:
+              isCompleted
+                  ? AppColors.successColor.withOpacity(0.5)
+                  : AppColors.accentBlueColor.withOpacity(0.5),
         ),
       ),
       child: Row(
@@ -480,9 +569,13 @@ class MatchCardInBracketsView extends StatelessWidget {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: isCompleted
-                    ? [AppColors.successColor, AppColors.accentCyanColor]
-                    : [AppColors.accentBlueColor, AppColors.accentPurpleColor],
+                colors:
+                    isCompleted
+                        ? [AppColors.successColor, AppColors.accentCyanColor]
+                        : [
+                          AppColors.accentBlueColor,
+                          AppColors.accentPurpleColor,
+                        ],
               ),
               borderRadius: BorderRadius.circular(8),
             ),
@@ -501,7 +594,10 @@ class MatchCardInBracketsView extends StatelessWidget {
                   isCompleted ? 'Match Completed' : 'Scheduled for',
                   style: AppTexts.bodyTextStyle(
                     context: context,
-                    textColor: isCompleted ? AppColors.successColor : AppColors.accentBlueColor,
+                    textColor:
+                        isCompleted
+                            ? AppColors.successColor
+                            : AppColors.accentBlueColor,
                     fontSize: AppFontSizes(context).size14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -522,7 +618,9 @@ class MatchCardInBracketsView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [AppColors.successColor, AppColors.accentCyanColor]),
+                gradient: LinearGradient(
+                  colors: [AppColors.successColor, AppColors.accentCyanColor],
+                ),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -545,20 +643,48 @@ class MatchCardInBracketsView extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.glassColor,
-        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
         border: Border(top: BorderSide(color: AppColors.glassBorderColor)),
       ),
       child: Row(
         children: [
-          Expanded(child: _buildActionButton(context, Icons.schedule, match.isScheduled ? 'Reschedule' : 'Schedule Match', AppColors.accentBlueColor, () => onScheduleMatch(match))),
+          Expanded(
+            child: _buildActionButton(
+              context,
+              Icons.schedule,
+              match.isScheduled ? 'Reschedule' : 'Schedule Match',
+              AppColors.accentBlueColor,
+              () => onScheduleMatch(match),
+            ),
+          ),
           const SizedBox(width: 12),
-          Expanded(child: _buildActionButton(context, Icons.scoreboard, 'Add Scores', AppColors.successColor, () => onUpdateScore(match))),
+          Visibility(
+            visible: match.isScheduled,
+            child: Expanded(
+              child: _buildActionButton(
+                context,
+                Icons.scoreboard,
+                'Add Scores',
+                AppColors.successColor,
+                () => onUpdateScore(match),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildActionButton(BuildContext context, IconData icon, String text, Color color, VoidCallback onPressed) {
+  Widget _buildActionButton(
+    BuildContext context,
+    IconData icon,
+    String text,
+    Color color,
+    VoidCallback onPressed,
+  ) {
     return ElevatedButton.icon(
       onPressed: onPressed,
       icon: Icon(icon, size: 18, color: AppColors.textPrimaryColor),
@@ -580,26 +706,36 @@ class MatchCardInBracketsView extends StatelessWidget {
       ).copyWith(
         backgroundColor: WidgetStateProperty.all(Colors.transparent),
         overlayColor: WidgetStateProperty.all(color.withOpacity(0.1)),
-        side: WidgetStateProperty.all(BorderSide(color: color.withOpacity(0.6), width: 1.5)),
+        side: WidgetStateProperty.all(
+          BorderSide(color: color.withOpacity(0.6), width: 1.5),
+        ),
       ),
     );
   }
 
   Color _getStatusColor() {
     switch (match.status.toLowerCase()) {
-      case 'completed': return AppColors.successColor;
-      case 'no show': return AppColors.errorColor;
-      case 'scheduled': return AppColors.accentBlueColor;
-      default: return AppColors.greyColor;
+      case 'completed':
+        return AppColors.successColor;
+      case 'no show':
+        return AppColors.errorColor;
+      case 'scheduled':
+        return AppColors.accentBlueColor;
+      default:
+        return AppColors.greyColor;
     }
   }
 
   IconData _getStatusIcon() {
     switch (match.status.toLowerCase()) {
-      case 'completed': return Icons.check_circle;
-      case 'no show': return Icons.cancel;
-      case 'scheduled': return Icons.schedule;
-      default: return Icons.pending;
+      case 'completed':
+        return Icons.check_circle;
+      case 'no show':
+        return Icons.cancel;
+      case 'scheduled':
+        return Icons.schedule;
+      default:
+        return Icons.pending;
     }
   }
 }

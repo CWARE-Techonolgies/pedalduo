@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -177,11 +178,11 @@ class Brackets extends ChangeNotifier {
   }
 
   Future<bool> scheduleMatch(
-    int matchId,
-    String matchDate,
-    String tournamentId,
-    String matchType,
-  ) async {
+      int matchId,
+      String matchDate,
+      String tournamentId,
+      String matchType,
+      ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
@@ -192,11 +193,19 @@ class Brackets extends ChangeNotifier {
         return false;
       }
 
-      final request = {"match_date": matchDate, "match_type": matchType};
+      final request = {
+        "match_date": matchDate,
+        "match_type": matchType,
+      };
+
+      if (kDebugMode) {
+        print('match date is $matchDate');
+        print('match type is $matchType');
+      }
 
       final response = await http.put(
         Uri.parse(
-          '${AppApis.baseUrl}tournaments/$tournamentId/matches/${matchId.toString()}/date',
+          '${AppApis.baseUrl}tournaments/$tournamentId/matches/$matchId/dateAndType',
         ),
         headers: {
           'Content-Type': 'application/json',
@@ -205,17 +214,35 @@ class Brackets extends ChangeNotifier {
         body: json.encode(request),
       );
 
+      if (kDebugMode) {
+        print("Status: ${response.statusCode}");
+        print("Response: ${response.body}");
+      }
+
       if (response.statusCode == 200) {
-        // Refresh tournament data
         await fetchTournamentData(tournamentId);
         return true;
       } else {
-        _error = 'Failed to schedule match';
+        String errorMessage = 'Failed to schedule match';
+
+        try {
+          final responseBody = json.decode(response.body);
+          errorMessage = responseBody['message'] ?? errorMessage;
+        } catch (_) {
+          if (kDebugMode) {
+            print("Non-JSON error response: ${response.body}");
+          }
+        }
+
+        _error = errorMessage;
         notifyListeners();
         return false;
       }
     } catch (e) {
       _error = 'Error scheduling match: $e';
+      if (kDebugMode) {
+        print(_error);
+      }
       notifyListeners();
       return false;
     }
@@ -339,6 +366,107 @@ class Brackets extends ChangeNotifier {
     } finally {
       _nextRoundLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> shareTournamentScore(
+      String tournamentId,
+      BuildContext context,
+      ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+
+      if (token == null) {
+        AppUtils.showFailureSnackBar(context, 'Authentication token not found');
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse('${AppApis.baseUrl}tournaments/$tournamentId/share'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        if (responseData['success'] == true) {
+          final shareUrl = responseData['data']['share_url'];
+          await Share.share(
+            'Check out this tournament scorecard: $shareUrl',
+            subject: 'Tournament Scorecard',
+          );
+        } else {
+          AppUtils.showFailureSnackBar(
+              context,
+              responseData['message'] ?? 'Failed to generate share link'
+          );
+        }
+      } else {
+        final responseData = json.decode(response.body);
+        AppUtils.showFailureSnackBar(
+            context,
+            responseData['message'] ?? 'Only organizers and participants can share tournaments'
+        );
+      }
+    } catch (e) {
+      AppUtils.showFailureSnackBar(
+          context,
+          'Error sharing tournament: $e'
+      );
+    }
+  }
+
+  Future<void> shareMatchScore(
+      int matchId,
+      String tournamentId,
+      BuildContext context,
+      ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+
+      if (token == null) {
+        AppUtils.showFailureSnackBar(context, 'Authentication token not found');
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse('${AppApis.baseUrl}tournaments/$tournamentId/matches/$matchId/share'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        if (responseData['success'] == true) {
+          final shareUrl = responseData['data']['share_url'];
+          await Share.share(
+            'Check out this match scorecard: $shareUrl',
+            subject: 'Match Scorecard',
+          );
+        } else {
+          AppUtils.showFailureSnackBar(
+              context,
+              responseData['message'] ?? 'Failed to generate share link'
+          );
+        }
+      } else {
+        final responseData = json.decode(response.body);
+        AppUtils.showFailureSnackBar(
+            context,
+            responseData['message'] ?? 'Only organizers and participants can share matches'
+        );
+      }
+    } catch (e) {
+      AppUtils.showFailureSnackBar(
+          context,
+          'Error sharing match: $e'
+      );
     }
   }
 }

@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:pedalduo/services/shared_preference_service.dart';
-
 import '../../../global/apis.dart';
 import '../../../models/user_model.dart';
 
@@ -16,6 +15,22 @@ class UserProfileProvider extends ChangeNotifier {
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  bool _isImageDeleted = false;
+
+  bool get isImageDeleted => _isImageDeleted;
+
+  // Method to delete the current profile image
+  void deleteProfileImage() {
+    _selectedImage = null;
+    _isImageDeleted = true;
+    notifyListeners();
+  }
+
+  // Method to reset image deletion state (call when loading user profile)
+  void resetImageDeletionState() {
+    _isImageDeleted = false;
+    notifyListeners();
+  }
 
   // Initialize user data from SharedPreferences
   Future<void> initializeUser() async {
@@ -155,8 +170,7 @@ class UserProfileProvider extends ChangeNotifier {
   Future<void> updateUserProfile({
     required String name,
     required String phone,
-    required String country,
-    required String gender,
+    required String email,
     String? avatar,
   }) async {
     _isUpdating = true;
@@ -173,13 +187,18 @@ class UserProfileProvider extends ChangeNotifier {
       final Map<String, dynamic> requestBody = {
         'name': name,
         'phone': phone,
-        'country': country,
-        'gender': gender,
+        'email': email,
       };
 
-      if (avatar != null) {
+      // Handle avatar logic
+      if (_isImageDeleted) {
+        // If image was deleted, send empty string
+        requestBody['avatar'] = '';
+      } else if (avatar != null) {
+        // If new image was selected
         requestBody['avatar'] = avatar;
       }
+      // If neither deleted nor new image selected, don't include avatar in request
 
       // Make API call
       final response = await http.put(
@@ -193,18 +212,26 @@ class UserProfileProvider extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         if (_user != null) {
+          String? newImageUrl = _user!.imageUrl;
+
+          if (_isImageDeleted) {
+            newImageUrl = '';
+          } else if (avatar != null) {
+            newImageUrl = avatar;
+          }
+
           _user = _user!.copyWith(
             name: name,
             phone: phone,
-            country: country,
-            gender: gender,
-            imageUrl: avatar,
+            email: email,
+            imageUrl: newImageUrl,
           );
 
           await SharedPreferencesService.saveUserData(_user!, token);
         }
 
         _selectedImage = null;
+        _isImageDeleted = false; // Reset deletion state after successful update
       } else {
         throw Exception('Failed to update profile: ${response.body}');
       }
@@ -213,6 +240,58 @@ class UserProfileProvider extends ChangeNotifier {
     } finally {
       _isUpdating = false;
       notifyListeners();
+    }
+  }
+
+  Future<bool> deleteProfileImageFromServer() async {
+    _isUpdating = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final token = await SharedPreferencesService.getToken();
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
+      // Prepare the request body with empty avatar to delete image
+      final Map<String, dynamic> requestBody = {
+        'name': _user!.name,
+        'phone': _user!.phone,
+        'email': _user!.email,
+        'avatar': '', // Empty string to delete the image
+      };
+
+      // Make API call
+      final response = await http.put(
+        Uri.parse(AppApis.userProfile),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode(requestBody),
+      );
+
+      if (response.statusCode == 200) {
+        // Update local user data
+        _user = _user!.copyWith(imageUrl: '');
+        await SharedPreferencesService.saveUserData(_user!, token);
+
+        // Reset image states
+        _selectedImage = null;
+        _isImageDeleted = true;
+
+        _isUpdating = false;
+        notifyListeners();
+        return true;
+      } else {
+        throw Exception('Failed to delete profile image: ${response.body}');
+      }
+    } catch (e) {
+      _errorMessage = 'Failed to delete profile image: $e';
+      _isUpdating = false;
+      notifyListeners();
+      return false;
     }
   }
 
@@ -248,5 +327,119 @@ class UserProfileProvider extends ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  // Email OTP verification methods
+  Future<bool> sendEmailOtp(String email) async {
+    try {
+      final token = await SharedPreferencesService.getToken();
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
+      final response = await http.post(
+        Uri.parse('${AppApis.baseUrl}send-email-otp'),
+        headers: {
+          'Content-Type': 'application/json',
+          // 'Authorization': 'Bearer $token',
+        },
+        body: json.encode({'email': email}),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      } else {
+        throw Exception('${jsonDecode(response.body)['message']}');
+      }
+    } catch (e) {
+      _errorMessage = 'Failed to send email OTP: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> verifyEmailOtp(String email, String otp) async {
+    try {
+      final token = await SharedPreferencesService.getToken();
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
+      final response = await http.post(
+        Uri.parse('${AppApis.baseUrl}verify-email-otp'),
+        headers: {
+          'Content-Type': 'application/json',
+          // 'Authorization': 'Bearer $token',
+        },
+        body: json.encode({'email': email, 'otp': otp}),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      } else {
+        throw Exception('${jsonDecode(response.body)['message']}');
+      }
+    } catch (e) {
+      _errorMessage = 'Failed to verify email OTP: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Phone OTP verification methods
+  Future<bool> sendPhoneOtp(String phone) async {
+    try {
+      final token = await SharedPreferencesService.getToken();
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
+      final response = await http.post(
+        Uri.parse('${AppApis.baseUrl}send-phone-otp'),
+        headers: {
+          'Content-Type': 'application/json',
+          // 'Authorization': 'Bearer $token',
+        },
+        body: json.encode({'phoneNumber': phone}),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      } else {
+        throw Exception('${jsonDecode(response.body)['message']}');
+      }
+    } catch (e) {
+      _errorMessage = 'Failed to send phone OTP: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> verifyPhoneOtp(String phone, String otp) async {
+    try {
+      final token = await SharedPreferencesService.getToken();
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
+      final response = await http.post(
+        Uri.parse('${AppApis.baseUrl}verify-phone-otp'),
+        headers: {
+          'Content-Type': 'application/json',
+          // 'Authorization': 'Bearer $token',
+        },
+        body: json.encode({'phoneNumber': phone, 'otp': otp}),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      } else {
+        throw Exception('${jsonDecode(response.body)['message']}');
+      }
+    } catch (e) {
+      _errorMessage = 'Failed to verify phone OTP: $e';
+      notifyListeners();
+      return false;
+    }
   }
 }

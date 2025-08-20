@@ -58,17 +58,15 @@ class _InvitationCardState extends State<InvitationCard>
     final invitation = widget.invitation;
     final isSent = widget.isSent;
 
-    // Calculate team capacity status
-    final hasSpaceLeft =
-        invitation.team.totalPlayers < invitation.tournament.playersPerTeam;
-    final teamCapacityText =
-        '${invitation.team.totalPlayers}/${invitation.tournament.playersPerTeam}';
+    // Calculate team capacity status using updated field names
+    final hasSpaceLeft = invitation.team.totalPlayers < invitation.team.maxPlayers;
+    final teamCapacityText = '${invitation.team.totalPlayers}/${invitation.team.maxPlayers}';
 
     // Check if invitation is expired
     final isExpired = DateTime.now().isAfter(invitation.expiresAt);
-    final tournamentStarted = DateTime.now().isAfter(
-      invitation.tournament.tournamentStartDate,
-    );
+    final tournamentStarted = invitation.tournament != null
+        ? DateTime.now().isAfter(invitation.tournament!.tournamentStartDate)
+        : false;
 
     // Check if buttons should be enabled
     final buttonsEnabled = !isSent &&
@@ -204,7 +202,7 @@ class _InvitationCardState extends State<InvitationCard>
                     ),
                     SizedBox(height: screenSize.width * 0.008),
                     Text(
-                      invitation.tournament.title,
+                      invitation.tournament?.title ?? 'Team Invitation',
                       style: AppTexts.bodyTextStyle(
                         context: context,
                         textColor: AppColors.textSecondaryColor,
@@ -258,26 +256,147 @@ class _InvitationCardState extends State<InvitationCard>
             ],
           ),
           SizedBox(height: screenSize.width * 0.025),
-          // Tournament gender and start date
+          // Tournament gender and start date (only if tournament data is available)
+          if (invitation.tournament != null) ...[
+            Row(
+              children: [
+                _buildHeaderChip(
+                  context,
+                  screenSize,
+                  Icons.sports_rounded,
+                  invitation.tournament!.gender.toUpperCase(),
+                  AppColors.glassColor,
+                ),
+                SizedBox(width: screenSize.width * 0.025),
+                _buildHeaderChip(
+                  context,
+                  screenSize,
+                  Icons.calendar_today_rounded,
+                  _formatDate(invitation.tournament!.tournamentStartDate),
+                  AppColors.glassColor,
+                ),
+              ],
+            ),
+          ] else ...[
+
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent(
+      BuildContext context,
+      Size screenSize,
+      bool hasSpaceLeft,
+      String teamCapacityText,
+      bool isExpired,
+      bool tournamentStarted,
+      bool buttonsEnabled,
+      ) {
+    final invitation = widget.invitation;
+    final isSent = widget.isSent;
+
+    return Padding(
+      padding: EdgeInsets.all(screenSize.width * 0.045),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Team capacity and invitation details
           Row(
             children: [
-              _buildHeaderChip(
+              _buildInfoChip(
                 context,
                 screenSize,
-                Icons.sports_rounded,
-                invitation.tournament.gender.toUpperCase(),
-                AppColors.glassColor,
+                Icons.people_rounded,
+                'Team Size',
+                teamCapacityText,
+                hasSpaceLeft ? AppColors.successColor : AppColors.errorColor,
               ),
               SizedBox(width: screenSize.width * 0.025),
-              _buildHeaderChip(
+              _buildInfoChip(
                 context,
                 screenSize,
-                Icons.calendar_today_rounded,
-                _formatDate(invitation.tournament.tournamentStartDate),
-                AppColors.glassColor,
+                Icons.schedule_rounded,
+                'Expires',
+                _formatDate(invitation.expiresAt),
+                isExpired ? AppColors.errorColor : AppColors.primaryColor,
               ),
             ],
           ),
+
+          // Message section (if available)
+          if (invitation.message.isNotEmpty) ...[
+            SizedBox(height: screenSize.width * 0.035),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(screenSize.width * 0.035),
+              decoration: BoxDecoration(
+                color: AppColors.glassLightColor.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(screenSize.width * 0.03),
+                border: Border.all(
+                  color: AppColors.glassBorderColor.withOpacity(0.5),
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.message_rounded,
+                        color: AppColors.primaryColor,
+                        size: screenSize.width * 0.04,
+                      ),
+                      SizedBox(width: screenSize.width * 0.02),
+                      Text(
+                        'Message',
+                        style: AppTexts.emphasizedTextStyle(
+                          context: context,
+                          textColor: AppColors.textPrimaryColor,
+                          fontSize: screenSize.width * 0.035,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: screenSize.width * 0.02),
+                  Text(
+                    invitation.message,
+                    style: AppTexts.bodyTextStyle(
+                      context: context,
+                      textColor: AppColors.textSecondaryColor,
+                      fontSize: screenSize.width * 0.033,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // Warning messages for various states
+          if (isExpired || !hasSpaceLeft || tournamentStarted) ...[
+            SizedBox(height: screenSize.width * 0.03),
+            _buildWarningMessage(
+              context,
+              screenSize,
+              isExpired,
+              hasSpaceLeft,
+              tournamentStarted,
+            ),
+          ],
+
+          // Action buttons section
+          if (!isSent) ...[
+            SizedBox(height: screenSize.width * 0.04),
+            _buildActionButtons(
+              context,
+              screenSize,
+              buttonsEnabled,
+            ),
+          ] else ...[
+
+          ],
         ],
       ),
     );
@@ -296,7 +415,7 @@ class _InvitationCardState extends State<InvitationCard>
         vertical: screenSize.width * 0.012,
       ),
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: backgroundColor.withOpacity(0.3),
         borderRadius: BorderRadius.circular(screenSize.width * 0.04),
         border: Border.all(
           color: AppColors.glassBorderColor,
@@ -318,7 +437,7 @@ class _InvitationCardState extends State<InvitationCard>
               context: context,
               textColor: AppColors.textPrimaryColor,
               fontSize: screenSize.width * 0.028,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -326,446 +445,7 @@ class _InvitationCardState extends State<InvitationCard>
     );
   }
 
-  Widget _buildContent(
-      BuildContext context,
-      Size screenSize,
-      bool hasSpaceLeft,
-      String teamCapacityText,
-      bool isExpired,
-      bool tournamentStarted,
-      bool buttonsEnabled,
-      ) {
-    final invitation = widget.invitation;
-    final isSent = widget.isSent;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.darkSecondaryColor.withOpacity(0.3),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(screenSize.width * 0.045),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // User info or Universal link
-            _buildUserInfo(context, screenSize),
-
-            SizedBox(height: screenSize.width * 0.04),
-
-            // Tournament details
-            _buildTournamentDetails(
-              context,
-              screenSize,
-              teamCapacityText,
-              hasSpaceLeft,
-            ),
-
-            SizedBox(height: screenSize.width * 0.035),
-
-            // Message
-            if (invitation.message.isNotEmpty &&
-                invitation.message != "Universal team invitation link" &&
-                invitation.message != "Invitation to join the team")
-              _buildMessage(context, screenSize),
-
-            // Invitation details
-            _buildInvitationDetails(context, screenSize, isExpired),
-
-            // Action buttons for received pending invitations
-            if (!isSent && invitation.isPending)
-              _buildActionButtons(context, screenSize, buttonsEnabled),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUserInfo(BuildContext context, Size screenSize) {
-    final invitation = widget.invitation;
-    final isSent = widget.isSent;
-
-    if (invitation.isUniversal) {
-      return Container(
-        padding: EdgeInsets.all(screenSize.width * 0.035),
-        decoration: BoxDecoration(
-          color: AppColors.accentPurpleColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(screenSize.width * 0.025),
-          border: Border.all(
-            color: AppColors.accentPurpleColor.withOpacity(0.3),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(screenSize.width * 0.02),
-              decoration: BoxDecoration(
-                color: AppColors.accentPurpleColor.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(screenSize.width * 0.02),
-              ),
-              child: Icon(
-                Icons.link_rounded,
-                color: AppColors.accentPurpleColor,
-                size: screenSize.width * 0.05,
-              ),
-            ),
-            SizedBox(width: screenSize.width * 0.035),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Universal Invitation',
-                    style: AppTexts.emphasizedTextStyle(
-                      context: context,
-                      textColor: AppColors.accentPurpleColor,
-                      fontSize: screenSize.width * 0.037,
-                    ),
-                  ),
-                  Text(
-                    'Code: ${invitation.invitationCode}',
-                    style: AppTexts.bodyTextStyle(
-                      context: context,
-                      textColor: AppColors.textSecondaryColor,
-                      fontSize: screenSize.width * 0.03,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (widget.onCopyLink != null)
-              GestureDetector(
-                onTap: () {
-                  Clipboard.setData(
-                    ClipboardData(text: invitation.invitationCode),
-                  );
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Invitation code copied!'),
-                      duration: Duration(seconds: 2),
-                      backgroundColor: AppColors.darkSecondaryColor,
-                    ),
-                  );
-                },
-                child: Container(
-                  padding: EdgeInsets.all(screenSize.width * 0.02),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentPurpleColor,
-                    borderRadius: BorderRadius.circular(
-                      screenSize.width * 0.02,
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.copy_rounded,
-                    color: AppColors.textPrimaryColor,
-                    size: screenSize.width * 0.04,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      );
-    } else {
-      final user = isSent ? invitation.invitee : invitation.inviter;
-      return Container(
-        padding: EdgeInsets.all(screenSize.width * 0.035),
-        decoration: BoxDecoration(
-          color: AppColors.glassColor,
-          borderRadius: BorderRadius.circular(screenSize.width * 0.025),
-          border: Border.all(
-            color: AppColors.glassBorderColor,
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: screenSize.width * 0.055,
-              backgroundColor: AppColors.primaryColor,
-              child: Text(
-                user?.initials ?? 'U',
-                style: AppTexts.emphasizedTextStyle(
-                  context: context,
-                  textColor: AppColors.textPrimaryColor,
-                  fontSize: screenSize.width * 0.042,
-                ),
-              ),
-            ),
-            SizedBox(width: screenSize.width * 0.035),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isSent ? 'Invited Player:' : 'Invitation From:',
-                    style: AppTexts.bodyTextStyle(
-                      context: context,
-                      textColor: AppColors.textTertiaryColor,
-                      fontSize: screenSize.width * 0.03,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  SizedBox(height: screenSize.width * 0.008),
-                  Text(
-                    user?.name ?? 'Unknown User',
-                    style: AppTexts.emphasizedTextStyle(
-                      context: context,
-                      textColor: AppColors.textPrimaryColor,
-                      fontSize: screenSize.width * 0.037,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (user?.email != null && user!.email.isNotEmpty) ...[
-                    SizedBox(height: screenSize.width * 0.005),
-                    Text(
-                      user.email,
-                      style: AppTexts.bodyTextStyle(
-                        context: context,
-                        textColor: AppColors.textSecondaryColor,
-                        fontSize: screenSize.width * 0.028,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-  }
-
-  Widget _buildTournamentDetails(
-      BuildContext context,
-      Size screenSize,
-      String teamCapacityText,
-      bool hasSpaceLeft,
-      ) {
-    final invitation = widget.invitation;
-
-    return Row(
-      children: [
-        Expanded(
-          child: _buildInfoItem(
-            context,
-            screenSize,
-            Icons.location_on_rounded,
-            'Location',
-            invitation.tournament.location,
-            AppColors.errorColor,
-            subtitle: '',
-          ),
-        ),
-        SizedBox(width: screenSize.width * 0.04),
-        Expanded(
-          child: _buildInfoItem(
-            context,
-            screenSize,
-            Icons.people_rounded,
-            'Team Size',
-            teamCapacityText,
-            hasSpaceLeft ? AppColors.successColor : AppColors.warningColor,
-            subtitle: hasSpaceLeft ? 'Space Available' : 'Team Full',
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInfoItem(
-      BuildContext context,
-      Size screenSize,
-      IconData icon,
-      String label,
-      String value,
-      Color color, {
-        String? subtitle,
-      }) {
-    return Container(
-      padding: EdgeInsets.all(screenSize.width * 0.03),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(screenSize.width * 0.025),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(screenSize.width * 0.015),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(screenSize.width * 0.015),
-            ),
-            child: Icon(icon, size: screenSize.width * 0.04, color: color),
-          ),
-          SizedBox(width: screenSize.width * 0.025),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: AppTexts.bodyTextStyle(
-                    context: context,
-                    textColor: color,
-                    fontSize: screenSize.width * 0.027,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(height: screenSize.width * 0.005),
-                Text(
-                  value,
-                  style: AppTexts.bodyTextStyle(
-                    context: context,
-                    textColor: AppColors.textPrimaryColor,
-                    fontSize: screenSize.width * 0.032,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                if (subtitle != null) ...[
-                  SizedBox(height: screenSize.width * 0.002),
-                  Text(
-                    subtitle,
-                    style: AppTexts.bodyTextStyle(
-                      context: context,
-                      textColor: color,
-                      fontSize: screenSize.width * 0.024,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMessage(BuildContext context, Size screenSize) {
-    return Container(
-      margin: EdgeInsets.only(bottom: screenSize.width * 0.035),
-      padding: EdgeInsets.all(screenSize.width * 0.035),
-      decoration: BoxDecoration(
-        color: AppColors.primaryColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(screenSize.width * 0.025),
-        border: Border.all(
-          color: AppColors.primaryColor.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.message_rounded,
-            color: AppColors.primaryColor,
-            size: screenSize.width * 0.045,
-          ),
-          SizedBox(width: screenSize.width * 0.025),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Message',
-                  style: AppTexts.bodyTextStyle(
-                    context: context,
-                    textColor: AppColors.primaryColor,
-                    fontSize: screenSize.width * 0.03,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(height: screenSize.width * 0.01),
-                Text(
-                  widget.invitation.message,
-                  style: AppTexts.bodyTextStyle(
-                    context: context,
-                    textColor: AppColors.textPrimaryColor,
-                    fontSize: screenSize.width * 0.034,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInvitationDetails(
-      BuildContext context,
-      Size screenSize,
-      bool isExpired,
-      ) {
-    final invitation = widget.invitation;
-
-    return Container(
-      margin: EdgeInsets.only(bottom: screenSize.width * 0.04),
-      padding: EdgeInsets.all(screenSize.width * 0.03),
-      decoration: BoxDecoration(
-        color: AppColors.glassColor,
-        borderRadius: BorderRadius.circular(screenSize.width * 0.02),
-        border: Border.all(
-          color: AppColors.glassBorderColor,
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildDetailItem(
-                context,
-                screenSize,
-                Icons.schedule_rounded,
-                'Expires',
-                _formatDate(invitation.expiresAt),
-                isExpired ? AppColors.errorColor : AppColors.warningColor,
-              ),
-              _buildDetailItem(
-                context,
-                screenSize,
-                Icons.send_rounded,
-                'Sent',
-                _formatDate(invitation.createdAt),
-                AppColors.accentBlueColor,
-              ),
-            ],
-          ),
-          SizedBox(height: screenSize.width * 0.025),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildDetailItem(
-                context,
-                screenSize,
-                Icons.qr_code_rounded,
-                'Code',
-                invitation.invitationCode,
-                AppColors.accentPurpleColor,
-              ),
-              _buildDetailItem(
-                context,
-                screenSize,
-                Icons.category_rounded,
-                'Type',
-                invitation.invitationType.replaceAll('_', ' ').toUpperCase(),
-                AppColors.primaryColor,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailItem(
+  Widget _buildInfoChip(
       BuildContext context,
       Size screenSize,
       IconData icon,
@@ -774,239 +454,101 @@ class _InvitationCardState extends State<InvitationCard>
       Color color,
       ) {
     return Expanded(
-      child: Row(
-        children: [
-          Icon(icon, size: screenSize.width * 0.035, color: color),
-          SizedBox(width: screenSize.width * 0.015),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: AppTexts.bodyTextStyle(
-                    context: context,
-                    textColor: color,
-                    fontSize: screenSize.width * 0.025,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  value,
-                  style: AppTexts.bodyTextStyle(
-                    context: context,
-                    textColor: AppColors.textPrimaryColor,
-                    fontSize: screenSize.width * 0.028,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+      child: Container(
+        padding: EdgeInsets.all(screenSize.width * 0.03),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(screenSize.width * 0.025),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 1,
           ),
-        ],
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: color,
+              size: screenSize.width * 0.045,
+            ),
+            SizedBox(height: screenSize.width * 0.015),
+            Text(
+              label,
+              style: AppTexts.bodyTextStyle(
+                context: context,
+                textColor: AppColors.textTertiaryColor,
+                fontSize: screenSize.width * 0.028,
+              ),
+            ),
+            SizedBox(height: screenSize.width * 0.005),
+            Text(
+              value,
+              style: AppTexts.emphasizedTextStyle(
+                context: context,
+                textColor: color,
+                fontSize: screenSize.width * 0.032,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, Size screenSize, bool buttonsEnabled) {
-    final hasSpaceLeft = widget.invitation.team.totalPlayers < widget.invitation.tournament.playersPerTeam;
-    final isExpired = DateTime.now().isAfter(widget.invitation.expiresAt);
-    final tournamentStarted = DateTime.now().isAfter(widget.invitation.tournament.tournamentStartDate);
+  Widget _buildWarningMessage(
+      BuildContext context,
+      Size screenSize,
+      bool isExpired,
+      bool hasSpaceLeft,
+      bool tournamentStarted,
+      ) {
+    String message;
+    IconData icon;
+    Color color = AppColors.warningColor;
 
-    // Show disabled message if buttons are not enabled
-    if (!buttonsEnabled) {
-      String disabledReason = '';
-      if (!hasSpaceLeft) {
-        disabledReason = 'Team is full';
-      } else if (isExpired) {
-        disabledReason = 'Invitation expired';
-      } else if (tournamentStarted) {
-        disabledReason = 'Tournament has started';
-      }
-
-      if (disabledReason.isNotEmpty) {
-        return Container(
-          margin: EdgeInsets.only(top: screenSize.width * 0.02),
-          padding: EdgeInsets.all(screenSize.width * 0.03),
-          decoration: BoxDecoration(
-            color: AppColors.greyColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(screenSize.width * 0.025),
-            border: Border.all(
-              color: AppColors.greyColor.withOpacity(0.3),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.info_outline_rounded,
-                color: AppColors.darkGreyColor,
-                size: screenSize.width * 0.045,
-              ),
-              SizedBox(width: screenSize.width * 0.02),
-              Text(
-                disabledReason,
-                style: AppTexts.bodyTextStyle(
-                  context: context,
-                  textColor: AppColors.darkGreyColor,
-                  fontSize: screenSize.width * 0.032,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        );
-      }
+    if (tournamentStarted) {
+      message = 'Tournament has already started';
+      icon = Icons.event_busy_rounded;
+      color = AppColors.errorColor;
+    } else if (isExpired) {
+      message = 'This invitation has expired';
+      icon = Icons.schedule_rounded;
+      color = AppColors.errorColor;
+    } else if (!hasSpaceLeft) {
+      message = 'Team is full';
+      icon = Icons.group_off_rounded;
+      color = AppColors.errorColor;
+    } else {
+      return const SizedBox.shrink();
     }
 
     return Container(
-      margin: EdgeInsets.only(top: screenSize.width * 0.02),
+      width: double.infinity,
+      padding: EdgeInsets.all(screenSize.width * 0.03),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(screenSize.width * 0.025),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
       child: Row(
         children: [
-          Expanded(
-            child: GestureDetector(
-              onTapDown: buttonsEnabled ? (_) => _animationController.forward() : null,
-              onTapUp: buttonsEnabled ? (_) => _animationController.reverse() : null,
-              onTapCancel: buttonsEnabled ? () => _animationController.reverse() : null,
-              onTap: (_isLoading || !buttonsEnabled)
-                  ? null
-                  : () async {
-                setState(() => _isLoading = true);
-                widget.onDecline?.call();
-                setState(() => _isLoading = false);
-              },
-              child: Opacity(
-                opacity: buttonsEnabled ? 1.0 : 0.5,
-                child: Container(
-                  height: screenSize.width * 0.12,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.redColor.withOpacity(0.8),
-                        AppColors.redColor,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(screenSize.width * 0.025),
-                    boxShadow: buttonsEnabled
-                        ? [
-                      BoxShadow(
-                        color: AppColors.redColor.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ]
-                        : [],
-                  ),
-                  child: _isLoading
-                      ? Center(
-                    child: SizedBox(
-                      width: screenSize.width * 0.05,
-                      height: screenSize.width * 0.05,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          AppColors.whiteColor,
-                        ),
-                      ),
-                    ),
-                  )
-                      : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.close_rounded,
-                        color: AppColors.whiteColor,
-                        size: screenSize.width * 0.05,
-                      ),
-                      SizedBox(width: screenSize.width * 0.02),
-                      Text(
-                        'DECLINE',
-                        style: AppTexts.bodyTextStyle(
-                          context: context,
-                          textColor: AppColors.whiteColor,
-                          fontSize: screenSize.width * 0.035,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          Icon(
+            icon,
+            color: color,
+            size: screenSize.width * 0.04,
           ),
-          SizedBox(width: screenSize.width * 0.04),
+          SizedBox(width: screenSize.width * 0.025),
           Expanded(
-            child: GestureDetector(
-              onTapDown: buttonsEnabled ? (_) => _animationController.forward() : null,
-              onTapUp: buttonsEnabled ? (_) => _animationController.reverse() : null,
-              onTapCancel: buttonsEnabled ? () => _animationController.reverse() : null,
-              onTap: (_isLoading || !buttonsEnabled)
-                  ? null
-                  : () async {
-                setState(() => _isLoading = true);
-                widget.onAccept?.call();
-                setState(() => _isLoading = false);
-              },
-              child: Opacity(
-                opacity: buttonsEnabled ? 1.0 : 0.5,
-                child: Container(
-                  height: screenSize.width * 0.12,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.orangeColor, AppColors.lightOrangeColor],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(screenSize.width * 0.025),
-                    boxShadow: buttonsEnabled
-                        ? [
-                      BoxShadow(
-                        color: AppColors.greenColor.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ]
-                        : [],
-                  ),
-                  child: _isLoading
-                      ? Center(
-                    child: SizedBox(
-                      width: screenSize.width * 0.05,
-                      height: screenSize.width * 0.05,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          AppColors.whiteColor,
-                        ),
-                      ),
-                    ),
-                  )
-                      : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.check_rounded,
-                        color: AppColors.whiteColor,
-                        size: screenSize.width * 0.05,
-                      ),
-                      SizedBox(width: screenSize.width * 0.02),
-                      Text(
-                        'ACCEPT',
-                        style: AppTexts.bodyTextStyle(
-                          context: context,
-                          textColor: AppColors.whiteColor,
-                          fontSize: screenSize.width * 0.035,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            child: Text(
+              message,
+              style: AppTexts.bodyTextStyle(
+                context: context,
+                textColor: color,
+                fontSize: screenSize.width * 0.032,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
@@ -1014,15 +556,116 @@ class _InvitationCardState extends State<InvitationCard>
       ),
     );
   }
+
+  Widget _buildActionButtons(
+      BuildContext context,
+      Size screenSize,
+      bool buttonsEnabled,
+      ) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildActionButton(
+            context,
+            screenSize,
+            'Accept',
+            Icons.check_rounded,
+            AppColors.successColor,
+            buttonsEnabled ? widget.onAccept : null,
+          ),
+        ),
+        SizedBox(width: screenSize.width * 0.025),
+        Expanded(
+          child: _buildActionButton(
+            context,
+            screenSize,
+            'Decline',
+            Icons.close_rounded,
+            AppColors.errorColor,
+            buttonsEnabled ? widget.onDecline : null,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton(
+      BuildContext context,
+      Size screenSize,
+      String text,
+      IconData icon,
+      Color color,
+      VoidCallback? onTap,
+      ) {
+    final isEnabled = onTap != null;
+
+    return GestureDetector(
+      onTap: isEnabled && !widget.isProcessing ? onTap : null,
+      onTapDown: isEnabled && !widget.isProcessing ? (_) => _animationController.forward() : null,
+      onTapUp: isEnabled && !widget.isProcessing ? (_) => _animationController.reverse() : null,
+      onTapCancel: isEnabled && !widget.isProcessing ? () => _animationController.reverse() : null,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          vertical: screenSize.width * 0.035,
+          horizontal: screenSize.width * 0.025,
+        ),
+        decoration: BoxDecoration(
+          color: isEnabled
+              ? color.withOpacity(0.15)
+              : AppColors.greyColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(screenSize.width * 0.03),
+          border: Border.all(
+            color: isEnabled
+                ? color.withOpacity(0.4)
+                : AppColors.greyColor.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (widget.isProcessing && text == 'Accept') ...[
+              SizedBox(
+                width: screenSize.width * 0.04,
+                height: screenSize.width * 0.04,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                ),
+              ),
+            ] else ...[
+              Icon(
+                icon,
+                color: isEnabled ? color : AppColors.greyColor,
+                size: screenSize.width * 0.04,
+              ),
+            ],
+            SizedBox(width: screenSize.width * 0.02),
+            Text(
+              text,
+              style: AppTexts.emphasizedTextStyle(
+                context: context,
+                textColor: isEnabled ? color : AppColors.greyColor,
+                fontSize: screenSize.width * 0.035,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = date.difference(now);
 
     if (difference.inDays > 0) {
-      return '${date.day}/${date.month}/${date.year}';
-    } else if (difference.inDays == 0) {
-      return 'Today';
+      return '${difference.inDays}d';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m';
     } else {
       return 'Expired';
     }

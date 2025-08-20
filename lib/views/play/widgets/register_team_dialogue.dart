@@ -540,4 +540,5 @@ class _RegisterTeamDialogState extends State<RegisterTeamDialog> {
     Navigator.pop(context); // Close loading
     Navigator.pop(context); // Close dialog
   }
+
 }

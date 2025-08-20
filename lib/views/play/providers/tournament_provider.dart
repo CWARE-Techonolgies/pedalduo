@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
+import 'package:pedalduo/payments/easy_paisa_payment_provider.dart';
 import 'package:pedalduo/views/play/models/tournaments_model.dart';
+import 'package:pedalduo/views/play/providers/team_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-
+import 'package:provider/provider.dart';
 import '../../../global/apis.dart';
 import '../../../utils/app_utils.dart';
 import '../models/my_tournament_models.dart';
@@ -62,8 +64,10 @@ class TournamentProvider with ChangeNotifier {
 
   // Loading states
   bool _isLoading = false;
+  bool _isCancelLoading = false;
   bool _isLoadingTournaments = false;
   bool get isLoading => _isLoading;
+  bool get isCancelLoading => _isCancelLoading;
   bool get isLoadingTournaments => _isLoadingTournaments;
 
   // Error handling
@@ -331,11 +335,6 @@ class TournamentProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void setLocation(String value) {
-    _location = value;
-    notifyListeners();
-  }
-
   void setPlayersPerTeam(int value) {
     _playersPerTeam = value;
     notifyListeners();
@@ -444,7 +443,6 @@ class TournamentProvider with ChangeNotifier {
   bool get isFormValid {
     return _title.isNotEmpty &&
         _location.isNotEmpty &&
-        _playersPerTeam > 0 &&
         _totalTeams >= 4 &&
         _totalTeams <= 32 &&
         _registrationEndDate != null &&
@@ -457,6 +455,8 @@ class TournamentProvider with ChangeNotifier {
   Future<bool> createTournament({
     String? apiUrl,
     bool isFirstTournament = false,
+    required BuildContext
+    context, // added context so we can read PaymentProvider
   }) async {
     if (!isFormValid) {
       _errorMessage = 'Please fill all required fields correctly.';
@@ -469,7 +469,6 @@ class TournamentProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Get token from SharedPreferences
       final token = await _getToken();
       if (token == null || token.isEmpty) {
         _errorMessage = 'Authentication token not found. Please login again.';
@@ -478,7 +477,6 @@ class TournamentProvider with ChangeNotifier {
         return false;
       }
 
-      // Prepare API data
       final Map<String, dynamic> tournamentData = {
         'title': _title,
         'description':
@@ -486,7 +484,7 @@ class TournamentProvider with ChangeNotifier {
                 ? 'Tournament created via mobile app'
                 : _description,
         'location': _location,
-        'players_per_team': _playersPerTeam,
+        'players_per_team': 2,
         'total_teams': _totalTeams,
         'player_fee': _playerFee,
         'gender': _gender.toLowerCase(),
@@ -505,7 +503,7 @@ class TournamentProvider with ChangeNotifier {
                 : 'Package 32',
         'package_price': getPackagePrice(isFirstTournament),
         'image_url': _imageUrl,
-        'is_first_tournament': isFirstTournament, // Add this flag
+        'is_first_tournament': isFirstTournament,
       };
 
       final url = apiUrl ?? AppApis.createTournament;
@@ -518,13 +516,24 @@ class TournamentProvider with ChangeNotifier {
         body: json.encode(tournamentData),
       );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final responseData = json.decode(response.body);
-        _tournaments.add(_title);
+      final responseData = json.decode(response.body);
 
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final tournamentId = responseData['data']?['id'];
+        if (tournamentId != null) {
+          await context
+              .read<EasyPaisaPaymentProvider>()
+              .confirmPaymentWithBackend(tournamentId, context);
+        } else {
+          _errorMessage = 'Tournament created but ID not found in response.';
+          _isLoading = false;
+          notifyListeners();
+          return false;
+        }
+
+        _tournaments.add(_title);
         _resetForm();
         clearTournamentCache();
-        // Refresh tournaments list
         await fetchMyTournaments();
 
         _isLoading = false;
@@ -536,24 +545,20 @@ class TournamentProvider with ChangeNotifier {
         notifyListeners();
         return false;
       } else {
-        // Handle other error status codes
-        final errorData = json.decode(response.body);
         _errorMessage =
-            errorData['message'] ??
+            responseData['message'] ??
             'Failed to create tournament. Please try again.';
         _isLoading = false;
         notifyListeners();
         return false;
       }
     } catch (e) {
-      // Handle network or other errors
       if (e.toString().contains('SocketException') ||
           e.toString().contains('TimeoutException')) {
         _errorMessage = 'Network error. Please check your internet connection.';
       } else {
         _errorMessage = 'An unexpected error occurred. Please try again.';
       }
-
       _isLoading = false;
       notifyListeners();
       return false;
@@ -603,7 +608,7 @@ class TournamentProvider with ChangeNotifier {
       }
 
       final response = await http.post(
-        Uri.parse(AppApis.registerTeam), // Add this to your APIs class
+        Uri.parse(AppApis.registerTeam),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -617,7 +622,11 @@ class TournamentProvider with ChangeNotifier {
       );
 
       if (response.statusCode >= 200 && response.statusCode <= 300) {
+        final responseData = jsonDecode(response.body);
+        final teamId = responseData['data']['id'].toString();
+        await _processPayment(teamId);
         AppUtils.showSuccessSnackBar(context, 'Team registered successfully!');
+        print('New Team ID: $teamId');
       } else {
         final error = jsonDecode(response.body);
         final errorMessage = error['message'] ?? 'Registration failed';
@@ -632,11 +641,232 @@ class TournamentProvider with ChangeNotifier {
     }
   }
 
+  Future<void> _processPayment(String teamId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+
+      if (token == null) {
+        throw Exception('Authentication token not found');
+      }
+
+      final response = await http.post(
+        Uri.parse('${AppApis.baseUrl}teams/$teamId/payment'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        print('wow done');
+      } else {
+        print('error in response ${response.body}');
+        // _showErrorMessage('Payment failed. Please try again.');
+      }
+    } catch (e) {
+      print('error in e: $e');
+      // _showErrorMessage('Error processing payment: ${e.toString()}');
+    } finally {
+      // setState(() {
+      //   _isProcessing = false;
+      // });
+    }
+  }
+
+  final List<Map<String, dynamic>> _padelCourts = [
+    {"name": "Padel Arena", "location": "Model Town", "courts": 2},
+    {"name": "Lets Padel", "location": "Packages Mall", "courts": 2},
+    {"name": "Club Padel", "location": "DHA Phase 4", "courts": 3},
+    {"name": "Padel In", "location": "DHA Phase 5", "courts": 9},
+    {"name": "Padel Pro", "location": "DHA Phase 5", "courts": 2},
+    {"name": "Padel Star", "location": "DHA Phase 5", "courts": 1},
+    {"name": "The Big Game", "location": "DHA Phase 5", "courts": 2},
+    {"name": "Padel Park", "location": "DHA Phase 5", "courts": 2},
+    {"name": "Padel Club", "location": "DHA Phase 5", "courts": 2},
+    {"name": "Padel Hub", "location": "DHA Phase 5", "courts": 2},
+    {"name": "Space Padel", "location": "DHA Phase 5", "courts": 2},
+    {"name": "Padel Connect", "location": "DHA Phase 5", "courts": 2},
+    {"name": "Mega Arena", "location": "DHA Phase 5", "courts": 6},
+    {"name": "Futsal Range", "location": "DHA Phase 5", "courts": 2},
+    {"name": "5th Generation", "location": "DHA Phase 6", "courts": 1},
+    {"name": "Jumbo Jump Padel", "location": "DHA Phase 8", "courts": 6},
+    {"name": "Padel Rush", "location": "DHA Phase 9", "courts": 2},
+    {"name": "Palm Padel", "location": "Bedian Road", "courts": 2},
+    {"name": "Fusion Station", "location": "Bedian Road", "courts": 2},
+    {"name": "Padel Pro", "location": "Barki Road", "courts": 2},
+    {"name": "Padel Mania", "location": "Barki Road", "courts": 2},
+    {"name": "The Courts", "location": "Gulberg", "courts": 1},
+    {"name": "Sky Padel", "location": "Gulberg", "courts": 2},
+    {"name": "Padel Central", "location": "Gulberg", "courts": 2},
+    {"name": "Lot Six", "location": "Gulberg", "courts": 1},
+    {"name": "Padel Social", "location": "Gulberg", "courts": 2},
+    {"name": "Padellina", "location": "Barkat Market", "courts": 1},
+    {"name": "Padel X", "location": "Johar Town", "courts": 1},
+    {"name": "Padelland", "location": "Johar Town", "courts": 1},
+    {"name": "Beach Club Padel", "location": "Johar Town", "courts": 1},
+    {"name": "Arena 360", "location": "Johar Town", "courts": 1},
+    {"name": "Padel Shadel", "location": "Wapda Town", "courts": 2},
+    {"name": "Cross Courts", "location": "Valencia", "courts": 2},
+    {"name": "Wynn Sports Arena", "location": "Valencia", "courts": 2},
+    {"name": "Pro Ball Arena", "location": "Valencia", "courts": 2},
+    {"name": "Futsal Range", "location": "Valencia", "courts": 2},
+    {"name": "The Box", "location": "Pine Avenue", "courts": 2},
+    {"name": "Padel Next", "location": "Pine Avenue", "courts": 1},
+    {"name": "Padel Play", "location": "Bahria Town", "courts": 2},
+    {"name": "Pulse Active", "location": "Bahria Town", "courts": 3},
+    {"name": "Padel Plus", "location": "DHA EME", "courts": 2},
+    {"name": "The Mad Padel", "location": "DHA EME", "courts": 1},
+    {"name": "Padel Cafe", "location": "DHA Phase 6", "courts": 2},
+  ];
+  List<Map<String, dynamic>> get padelCourts => _padelCourts;
+  Map<String, dynamic>? _selectedCourt;
+  Map<String, dynamic>? get selectedCourt => _selectedCourt;
+
+  // Update the setLocation method
+  void setLocation(Map<String, dynamic>? court) {
+    _selectedCourt = court;
+    _location = court != null ? "${court['name']} - ${court['location']}" : '';
+    notifyListeners();
+  }
+
+  Future<bool> cancelTournament({
+    required BuildContext context,
+    required int tournamentId,
+  }) async {
+    _isCancelLoading = true;
+    _errorMessage = '';
+    notifyListeners();
+
+    try {
+      final token = await _getToken();
+      if (token == null || token.isEmpty) {
+        _errorMessage = 'Authentication token not found. Please login again.';
+        _isCancelLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      final url = '${AppApis.baseUrl}tournaments/$tournamentId/cancel';
+      final response = await http.put(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // Clear cache to refresh tournaments
+        clearTournamentCache();
+
+        // Refresh tournaments list
+        await fetchMyTournaments(forceRefresh: true);
+
+        _isCancelLoading = false;
+        notifyListeners();
+
+        // Check if context is still mounted before showing snackbar
+        if (context.mounted) {
+          AppUtils.showSuccessSnackBar(
+            context,
+            'Tournament cancelled successfully!',
+          );
+        }
+        return true;
+      } else if (response.statusCode == 401) {
+        _errorMessage = 'Authentication failed. Please login again.';
+        if (context.mounted) {
+          AppUtils.showFailureSnackBar(context, _errorMessage);
+        }
+      } else {
+        final errorData = json.decode(response.body);
+        _errorMessage = errorData['message'] ?? 'Failed to cancel tournament.';
+        if (context.mounted) {
+          AppUtils.showFailureSnackBar(context, _errorMessage);
+        }
+      }
+    } catch (e) {
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        _errorMessage = 'Network error. Please check your internet connection.';
+      } else {
+        _errorMessage = 'An unexpected error occurred. Please try again.';
+      }
+      if (context.mounted) {
+        AppUtils.showFailureSnackBar(context, _errorMessage);
+      }
+    }
+
+    _isCancelLoading = false;
+    notifyListeners();
+    return false;
+  }
+
+  // List<String> _selectedStatuses = ['ongoing', 'approved']; // Default filter
+  bool _showFilterOptions = false;
+
+  // Available status options
+  final List<Map<String, String>> _statusOptions = [
+    {'value': 'ongoing', 'display': 'Ongoing'},
+    {'value': 'approved', 'display': 'Up Coming'},
+    {'value': 'completed', 'display': 'Completed'},
+    {'value': 'under review', 'display': 'Under Review'},
+    {'value': 'rejected', 'display': 'Rejected'},
+    {'value': 'cancelled', 'display': 'Cancelled'},
+  ];
+
+  // Getters
+  // List<String> get selectedStatuses => _selectedStatuses;
+  bool get showFilterOptions => _showFilterOptions;
+  List<Map<String, String>> get statusOptions => _statusOptions;
+
+  // Filter methods
+  // void toggleStatusFilter(String status) {
+  //   if (_selectedStatuses.contains(status)) {
+  //     if (_selectedStatuses.length > 1) {
+  //       // Don't allow empty filter
+  //       _selectedStatuses.remove(status);
+  //     }
+  //   } else {
+  //     _selectedStatuses.add(status);
+  //   }
+  //   notifyListeners();
+  // }
+
+  void toggleFilterOptions() {
+    _showFilterOptions = !_showFilterOptions;
+    notifyListeners();
+  }
+
+  // void resetFilters() {
+  //   _selectedStatuses = ['ongoing', 'approved'];
+  //   notifyListeners();
+  // }
+
+  // Filtered tournament lists
+  // List<Tournament> get filteredAllTournaments {
+  //   return _allTournaments.where((tournament) {
+  //     return _selectedStatuses.contains(tournament.status.toLowerCase());
+  //   }).toList();
+  // }
+  //
+  // List<MyTournament> get filteredOrganizedTournaments {
+  //   return _organizedTournaments.where((tournament) {
+  //     return _selectedStatuses.contains(tournament.status.toLowerCase());
+  //   }).toList();
+  // }
+
+  // List<MyTournament> get filteredPlayedTournaments {
+  //   return _playedTournaments.where((tournament) {
+  //     return _selectedStatuses.contains(tournament.status.toLowerCase());
+  //   }).toList();
+  // }
+
   // Empty state checks
   bool get hasTournaments => _tournaments.isNotEmpty;
   bool get hasTeams => _teams.isNotEmpty;
   bool get hasMatches => _matches.isNotEmpty;
-
   // For tournaments tab - check if user has created tournaments
   bool get hasMyTournaments => _myTournaments.isNotEmpty;
   bool get hasAllTournaments => _allTournaments.isNotEmpty;

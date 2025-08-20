@@ -1,7 +1,8 @@
 class AppImages {
   static const String baseImage = 'assets/images/';
   static const String logoImage = '${baseImage}logo.png';
-  static const String placeholderTournament = '${baseImage}placeholder_tournament.jpg';
+  static const String logoImage2 = '${baseImage}logo2.png';
+  static const String placeholderTournament = '${baseImage}padel_placeholder.jpeg';
   static const String slide1 = 'https://static.vecteezy.com/system/resources/previews/047/536/658/non_2x/side-view-of-padel-tennis-racket-in-puddle-close-up-generated-by-artificial-intelligence-free-photo.jpg';
   static const String slide2 = 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80';
   static const String slide3 = 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80';

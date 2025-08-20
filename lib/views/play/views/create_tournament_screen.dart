@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'dart:convert';
 import 'dart:ui';
-
 import '../../../style/colors.dart';
 import '../../../style/fonts_sizes.dart';
 import '../../../style/texts.dart';
@@ -21,7 +20,7 @@ class CreateTournamentScreen extends StatefulWidget {
 class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   final _titleController = TextEditingController();
   final _locationController = TextEditingController();
-  final _playersPerTeamController = TextEditingController();
+  final _playersPerTeamController = TextEditingController(text: '2');
   final _totalTeamsController = TextEditingController();
   final _playerFeeController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -171,7 +170,10 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                             children: [
                               _buildImagePicker(context, provider),
                               SizedBox(height: 20),
-                              ..._buildFormFields(provider, user?.isFirstTournament ?? false),
+                              ..._buildFormFields(
+                                provider,
+                                user?.isFirstTournament ?? false,
+                              ),
                             ],
                           );
                         },
@@ -217,7 +219,10 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
     );
   }
 
-  List<Widget> _buildFormFields(TournamentProvider provider, bool isFirstTournament) {
+  List<Widget> _buildFormFields(
+    TournamentProvider provider,
+    bool isFirstTournament,
+  ) {
     return [
       // Title Field
       GlassInputField(
@@ -238,37 +243,22 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
       ),
       SizedBox(height: 16),
 
-      // Location Field
-      GlassInputField(
-        title: 'Location*',
-        controller: _locationController,
-        onChanged: provider.setLocation,
-        icon: Icons.location_on,
-      ),
+      _buildLocationDropdown(provider),
       SizedBox(height: 16),
 
       // Players and Teams Row
       Row(
         children: [
-          Expanded(
-            child: GlassInputField(
-              title: 'Players/Team*',
-              controller: _playersPerTeamController,
-              keyboardType: TextInputType.number,
-              onChanged: (value) {
-                final intValue = int.tryParse(value) ?? 0;
-                provider.setPlayersPerTeam(intValue);
-              },
-              icon: Icons.group,
-            ),
-          ),
-          SizedBox(width: 12),
+
           Expanded(
             child: GlassInputField(
               title: 'Total Teams*',
               controller: _totalTeamsController,
               keyboardType: TextInputType.number,
-              errorText: provider.totalTeamsError.isEmpty ? null : provider.totalTeamsError,
+              errorText:
+                  provider.totalTeamsError.isEmpty
+                      ? null
+                      : provider.totalTeamsError,
               onChanged: (value) {
                 final intValue = int.tryParse(value) ?? 0;
                 provider.setTotalTeams(intValue);
@@ -281,12 +271,12 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
       SizedBox(height: 16),
 
       // Package Type Display
-      _buildPackageDisplay(provider),
-      SizedBox(height: 16),
+      // _buildPackageDisplay(provider),
+      // SizedBox(height: 16),
 
       // Package Pricing Info
-      _buildPricingInfo(provider, isFirstTournament),
-      SizedBox(height: 16),
+      // _buildPricingInfo(provider, isFirstTournament),
+      // SizedBox(height: 16),
 
       // Player Fee Field
       GlassInputField(
@@ -396,12 +386,22 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
     );
   }
 
-  Widget _buildPricingInfo(TournamentProvider provider, bool isFirstTournament) {
+  Widget _buildPricingInfo(
+    TournamentProvider provider,
+    bool isFirstTournament,
+  ) {
     return GlassContainer(
       gradient: LinearGradient(
-        colors: isFirstTournament
-            ? [AppColors.successColor.withOpacity(0.2), AppColors.successColor.withOpacity(0.1)]
-            : [AppColors.accentBlueColor.withOpacity(0.2), AppColors.accentCyanColor.withOpacity(0.1)],
+        colors:
+            isFirstTournament
+                ? [
+                  AppColors.successColor.withOpacity(0.2),
+                  AppColors.successColor.withOpacity(0.1),
+                ]
+                : [
+                  AppColors.accentBlueColor.withOpacity(0.2),
+                  AppColors.accentCyanColor.withOpacity(0.1),
+                ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -410,12 +410,17 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
             children: [
               Icon(
                 isFirstTournament ? Icons.celebration : Icons.info_outline,
-                color: isFirstTournament ? AppColors.successColor : AppColors.accentBlueColor,
+                color:
+                    isFirstTournament
+                        ? AppColors.successColor
+                        : AppColors.accentBlueColor,
                 size: 20,
               ),
               SizedBox(width: 12),
               Text(
-                isFirstTournament ? 'First Tournament - FREE!' : 'Package Pricing',
+                isFirstTournament
+                    ? 'First Tournament - FREE!'
+                    : 'Package Pricing',
                 style: AppTexts.bodyTextStyle(
                   context: context,
                   textColor: AppColors.textPrimaryColor,
@@ -468,19 +473,20 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
               border: InputBorder.none,
               contentPadding: EdgeInsets.zero,
             ),
-            items: provider.genderOptions.map((String value) {
-              return DropdownMenuItem<String>(
-                value: value,
-                child: Text(
-                  value,
-                  style: AppTexts.bodyTextStyle(
-                    context: context,
-                    textColor: AppColors.textPrimaryColor,
-                    fontSize: AppFontSizes(context).size14,
-                  ),
-                ),
-              );
-            }).toList(),
+            items:
+                provider.genderOptions.map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(
+                      value,
+                      style: AppTexts.bodyTextStyle(
+                        context: context,
+                        textColor: AppColors.textPrimaryColor,
+                        fontSize: AppFontSizes(context).size14,
+                      ),
+                    ),
+                  );
+                }).toList(),
             onChanged: (String? value) {
               if (value != null) {
                 provider.setGender(value);
@@ -556,58 +562,56 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.glassBorderColor),
       ),
-      child: _cachedImageUrl.isEmpty
-          ? Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.image_outlined,
-            size: 48,
-            color: AppColors.textTertiaryColor,
-          ),
-          SizedBox(height: 8),
-          Text(
-            'No image selected',
-            style: AppTexts.bodyTextStyle(
-              context: context,
-              textColor: AppColors.textTertiaryColor,
-              fontSize: AppFontSizes(context).size12,
-            ),
-          ),
-        ],
-      )
-          : Stack(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.memory(
-              base64Decode(_cachedImageUrl.split(',')[1]),
-              width: double.infinity,
-              height: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          ),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: GestureDetector(
-              onTap: () => context.read<TournamentProvider>().clearImage(),
-              child: Container(
-                padding: EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppColors.errorColor.withOpacity(0.8),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.close,
-                  color: Colors.white,
-                  size: 16,
-                ),
+      child:
+          _cachedImageUrl.isEmpty
+              ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.image_outlined,
+                    size: 48,
+                    color: AppColors.textTertiaryColor,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'No image selected',
+                    style: AppTexts.bodyTextStyle(
+                      context: context,
+                      textColor: AppColors.textTertiaryColor,
+                      fontSize: AppFontSizes(context).size12,
+                    ),
+                  ),
+                ],
+              )
+              : Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.memory(
+                      base64Decode(_cachedImageUrl.split(',')[1]),
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: GestureDetector(
+                      onTap:
+                          () => context.read<TournamentProvider>().clearImage(),
+                      child: Container(
+                        padding: EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.errorColor.withOpacity(0.8),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.close, color: Colors.white, size: 16),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -642,52 +646,303 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
     );
   }
 
-  Widget _buildCreateButton(TournamentProvider provider, bool isFirstTournament) {
+  Widget _buildCreateButton(
+    TournamentProvider provider,
+    bool isFirstTournament,
+  ) {
     return GlassButton(
-      onTap: provider.isLoading || !provider.isFormValid
-          ? null
-          : () async {
-        final success = await provider.createTournament(
-          isFirstTournament: isFirstTournament,
-        );
-        if (success && mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                isFirstTournament
-                    ? 'Congratulations! Your first tournament created successfully for FREE!'
-                    : 'Tournament created successfully!',
-              ),
-              backgroundColor: AppColors.successColor,
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
-      },
-      gradient: provider.isFormValid && !provider.isLoading
-          ? LinearGradient(
-        colors: [AppColors.primaryColor, AppColors.accentPurpleColor],
-      )
-          : null,
+      onTap:
+          provider.isLoading || !provider.isFormValid
+              ? null
+              : () async {
+                final success = await provider.createTournament(
+                  isFirstTournament: isFirstTournament,
+                  context: context,
+                );
+                if (success && mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        // isFirstTournament
+                        //     ? 'Congratulations! Your first tournament created successfully for FREE!'
+                        //     :
+                        'Tournament created successfully!',
+                      ),
+                      backgroundColor: AppColors.successColor,
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                }
+              },
+      gradient:
+          provider.isFormValid && !provider.isLoading
+              ? LinearGradient(
+                colors: [AppColors.primaryColor, AppColors.accentPurpleColor],
+              )
+              : null,
       isDisabled: !provider.isFormValid || provider.isLoading,
-      child: provider.isLoading
-          ? SpinKitDoubleBounce(
-        color: AppColors.textPrimaryColor,
-        size: 24,
-      )
-          : Text(
-        isFirstTournament
-            ? 'Create Your First Tournament - FREE! 🎉'
-            : 'Create Tournament - ${provider.getPackagePrice(isFirstTournament).toStringAsFixed(0)} PKR',
-        style: AppTexts.bodyTextStyle(
-          context: context,
-          textColor: AppColors.textPrimaryColor,
-          fontSize: AppFontSizes(context).size16,
-          fontWeight: FontWeight.w600,
+      child:
+          provider.isLoading
+              ? SpinKitDoubleBounce(color: AppColors.textPrimaryColor, size: 24)
+              : Text(
+                // isFirstTournament
+                //     ?
+                'Create Your Tournament - FREE! 🎉',
+                // ? 'Create Your First Tournament - FREE! 🎉'
+                // : 'Create Tournament - ${provider.getPackagePrice(isFirstTournament).toStringAsFixed(0)} PKR',
+                style: AppTexts.bodyTextStyle(
+                  context: context,
+                  textColor: AppColors.textPrimaryColor,
+                  fontSize: AppFontSizes(context).size16,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+    );
+  }
+
+  Widget _buildLocationDropdown(TournamentProvider provider) {
+    return Column(
+      children: [
+        GlassContainer(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.location_on,
+                    color: AppColors.darkOrangeColor,
+                    size: 16,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Location*',
+                    style: AppTexts.bodyTextStyle(
+                      context: context,
+                      textColor: AppColors.textSecondaryColor,
+                      fontSize: AppFontSizes(context).size12,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 8),
+              DropdownButtonFormField<Map<String, dynamic>>(
+                value: provider.selectedCourt,
+                dropdownColor: AppColors.darkSecondaryColor,
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                  hintText: 'Select a venue',
+                  hintStyle: AppTexts.bodyTextStyle(
+                    context: context,
+                    textColor: AppColors.darkSecondaryColor,
+                    fontSize: AppFontSizes(context).size14,
+                  ),
+                ),
+                isExpanded: true,
+                items:
+                    provider.padelCourts.map((Map<String, dynamic> court) {
+                      return DropdownMenuItem<Map<String, dynamic>>(
+                        value: court,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                court['name'],
+                                style: AppTexts.bodyTextStyle(
+                                  context: context,
+                                  textColor: AppColors.textPrimaryColor,
+                                  fontSize: AppFontSizes(context).size14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_pin,
+                                    size: 12,
+                                    color: AppColors.textSecondaryColor,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    court['location'],
+                                    style: AppTexts.bodyTextStyle(
+                                      context: context,
+                                      textColor: AppColors.textSecondaryColor,
+                                      fontSize: AppFontSizes(context).size12,
+                                    ),
+                                  ),
+                                  Spacer(),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.accentBlueColor
+                                          .withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      '${court['courts']} courts',
+                                      style: AppTexts.bodyTextStyle(
+                                        context: context,
+                                        textColor: AppColors.accentBlueColor,
+                                        fontSize: AppFontSizes(context).size10,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                onChanged: (Map<String, dynamic>? value) {
+                  provider.setLocation(value);
+                },
+                selectedItemBuilder: (BuildContext context) {
+                  return provider.padelCourts.map((Map<String, dynamic> court) {
+                    return Container(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        provider.selectedCourt != null
+                            ? 'Selected venue'
+                            : 'Select a venue',
+                        style: AppTexts.bodyTextStyle(
+                          context: context,
+                          textColor:
+                              provider.selectedCourt != null
+                                  ? AppColors.textPrimaryColor
+                                  : AppColors.textTertiaryColor,
+                          fontSize: AppFontSizes(context).size14,
+                        ),
+                      ),
+                    );
+                  }).toList();
+                },
+              ),
+            ],
+          ),
         ),
-        textAlign: TextAlign.center,
-      ),
+
+        // Selected venue card
+        if (provider.selectedCourt != null) ...[
+          SizedBox(height: 12),
+          GlassContainer(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.accentBlueColor.withOpacity(0.15),
+                AppColors.accentCyanColor.withOpacity(0.1),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.accentBlueColor,
+                        AppColors.accentCyanColor,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.location_city,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        provider.selectedCourt!['name'],
+                        style: AppTexts.bodyTextStyle(
+                          context: context,
+                          textColor: AppColors.textPrimaryColor,
+                          fontSize: AppFontSizes(context).size16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_pin,
+                            size: 14,
+                            color: AppColors.textSecondaryColor,
+                          ),
+                          SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              provider.selectedCourt!['location'],
+                              style: AppTexts.bodyTextStyle(
+                                context: context,
+                                textColor: AppColors.textSecondaryColor,
+                                fontSize: AppFontSizes(context).size14,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.sports_tennis,
+                            size: 14,
+                            color: AppColors.accentCyanColor,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            '${provider.selectedCourt!['courts']} Courts Available',
+                            style: AppTexts.bodyTextStyle(
+                              context: context,
+                              textColor: AppColors.accentCyanColor,
+                              fontSize: AppFontSizes(context).size12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => provider.setLocation(null),
+                  child: Container(
+                    padding: EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.errorColor.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.close,
+                      color: AppColors.errorColor,
+                      size: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -714,19 +969,15 @@ class GlassContainer extends StatelessWidget {
       padding: padding ?? EdgeInsets.all(16),
       margin: margin,
       decoration: BoxDecoration(
-        gradient: gradient ?? LinearGradient(
-          colors: [
-            AppColors.glassLightColor,
-            AppColors.glassColor,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient:
+            gradient ??
+            LinearGradient(
+              colors: [AppColors.glassLightColor, AppColors.glassColor],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.glassBorderColor,
-          width: 1,
-        ),
+        border: Border.all(color: AppColors.glassBorderColor, width: 1),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -889,9 +1140,10 @@ class GlassDateField extends StatelessWidget {
                         : 'Select date',
                     style: AppTexts.bodyTextStyle(
                       context: context,
-                      textColor: selectedDate != null
-                          ? AppColors.textPrimaryColor
-                          : AppColors.textTertiaryColor,
+                      textColor:
+                          selectedDate != null
+                              ? AppColors.textPrimaryColor
+                              : AppColors.textTertiaryColor,
                       fontSize: AppFontSizes(context).size14,
                     ),
                   ),
@@ -932,25 +1184,27 @@ class GlassButton extends StatelessWidget {
         width: double.infinity,
         padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
         decoration: BoxDecoration(
-          gradient: isDisabled
-              ? LinearGradient(
-            colors: [
-              AppColors.greyColor.withOpacity(0.3),
-              AppColors.greyColor.withOpacity(0.2),
-            ],
-          )
-              : gradient ??
-              LinearGradient(
-                colors: [
-                  AppColors.glassLightColor,
-                  AppColors.glassColor,
-                ],
-              ),
+          gradient:
+              isDisabled
+                  ? LinearGradient(
+                    colors: [
+                      AppColors.greyColor.withOpacity(0.3),
+                      AppColors.greyColor.withOpacity(0.2),
+                    ],
+                  )
+                  : gradient ??
+                      LinearGradient(
+                        colors: [
+                          AppColors.glassLightColor,
+                          AppColors.glassColor,
+                        ],
+                      ),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isDisabled
-                ? AppColors.greyColor.withOpacity(0.3)
-                : AppColors.greyColor,
+            color:
+                isDisabled
+                    ? AppColors.greyColor.withOpacity(0.3)
+                    : AppColors.greyColor,
           ),
         ),
         child: ClipRRect(

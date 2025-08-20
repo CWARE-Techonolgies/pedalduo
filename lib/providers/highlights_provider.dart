@@ -11,36 +11,16 @@ class HighlightsProvider extends ChangeNotifier {
     _selectedTab = index;
     notifyListeners();
   }
-  final List<HighlightItem> _highlights = [
-    HighlightItem(
-      title: 'Match Winning Shot!',
-      author: 'Saud Gul',
-      timeAgo: '2 days ago',
-      likes: '1.2k',
-      comments: '84',
-    ),
-    HighlightItem(
-      title: 'Match Winning Shot!',
-      author: 'Tanveer Hussain',
-      timeAgo: '2 days ago',
-      likes: '1.2k',
-      comments: '84',
-    ),
-    HighlightItem(
-      title: 'Match Winning Shot!',
-      author: 'Muhammad Awais',
-      timeAgo: '2 days ago',
-      likes: '1.2k',
-      comments: '84',
-    ),
-    HighlightItem(
-      title: 'Match Winning Shot!',
-      author: 'Fezan Ali',
-      timeAgo: '2 days ago',
-      likes: '1.2k',
-      comments: '84',
-    ),
-  ];
+
+  // Placeholder data - will be replaced with real data later
+  final List<HighlightItem> _highlights = [];
 
   List<HighlightItem> get highlights => _highlights;
+
+  // Method to check if we have real data or just placeholders
+  bool get hasRealData => false; // Set to true when real data is loaded
+
+  // Placeholder message for users
+  String get placeholderMessage =>
+      "🎾 Come back again to check for exciting new highlights and battle updates!";
 }

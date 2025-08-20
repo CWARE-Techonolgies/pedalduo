@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../global/apis.dart';
@@ -14,17 +14,21 @@ class NotificationProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   bool _isEnablingNotifications = false;
-  Set<String> _processingTopics = {}; // Track which topics are being processed
+  Set<String> _processingCategories = {};
 
   NotificationSettingsModel? get settings => _settings;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isEnablingNotifications => _isEnablingNotifications;
 
-  // Check if a specific topic is being processed
-  bool isTopicProcessing(String topic) => _processingTopics.contains(topic);
+  // Check if a specific category is being processed
+  bool isCategoryProcessing(String category) => _processingCategories.contains(category);
 
+  /// Fetch notification settings from server
   Future<void> fetchNotificationSettings() async {
+    if (kDebugMode) {
+      print('📱 Fetching notification settings...');
+    }
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -37,6 +41,9 @@ class NotificationProvider extends ChangeNotifier {
         throw Exception('No authentication token found');
       }
 
+      if (kDebugMode) {
+        print('🔑 Making GET request to: ${AppApis.getNotificationPreferences}');
+      }
       final response = await http.get(
         Uri.parse(AppApis.getNotificationPreferences),
         headers: {
@@ -45,13 +52,27 @@ class NotificationProvider extends ChangeNotifier {
         },
       );
 
+      if (kDebugMode) {
+        print('📥 Response status: ${response.statusCode}');
+        print('📥 Response body: ${response.body}');
+      }
+
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         _settings = NotificationSettingsModel.fromJson(data['data']);
+        if (kDebugMode) {
+          print('✅ Settings loaded successfully');
+          print('📊 Push enabled: ${_settings?.pushEnabled}');
+        }
+
       } else {
-        throw Exception('Failed to load notification settings');
+        throw Exception('Failed to load notification settings: ${response.statusCode}');
       }
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error fetching settings: $e');
+      }
       _error = e.toString();
     } finally {
       _isLoading = false;
@@ -59,42 +80,68 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
+  /// Register FCM token with server - can be called from anywhere
+  Future<bool> registerFCMToken() async {
+    if (kDebugMode) {
+      print('🚀 Starting FCM token registration...');
+    }
+
+    try {
+
+      // Get FCM token
+      final messaging = FirebaseMessaging.instance;
+      final fcmToken = await messaging.getToken();
+
+      if (fcmToken == null) {
+        if (kDebugMode) {
+          print('❌ Failed to get FCM token');
+        }
+        throw Exception('Failed to get FCM token');
+      }
+
+      if (kDebugMode) {
+        print('🔑 FCM Token obtained: ${fcmToken.substring(0, 20)}...');
+      }
+
+      // Get device info
+      final deviceInfo = await _getDeviceInfo();
+      if (kDebugMode) {
+        print('📱 Device info: $deviceInfo');
+      }
+
+      // Register FCM token
+      await _registerFCMToken(fcmToken, deviceInfo);
+
+      if (kDebugMode) {
+        print('✅ FCM token registered successfully');
+      }
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error registering FCM token: $e');
+      }
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Enable push notifications (UI flow)
   Future<void> enablePushNotifications() async {
+    if (kDebugMode) {
+      print('🔔 Enabling push notifications...');
+    }
     _isEnablingNotifications = true;
     _error = null;
     notifyListeners();
 
     try {
-      // Initialize FCM service
-      await FCMService().initialize();
-
-      // Request permission
-      final messaging = FirebaseMessaging.instance;
-      NotificationSettings permission = await messaging.requestPermission(
-        alert: true,
-        announcement: false,
-        badge: true,
-        carPlay: false,
-        criticalAlert: false,
-        provisional: false,
-        sound: true,
-      );
-
-      if (permission.authorizationStatus != AuthorizationStatus.authorized) {
-        throw Exception('Notification permission denied');
-      }
-
-      // Get FCM token
-      final fcmToken = await messaging.getToken();
-      if (fcmToken == null) {
-        throw Exception('Failed to get FCM token');
-      }
-
-      // Get device info
-      final deviceInfo = await _getDeviceInfo();
-
       // Register FCM token
-      await _registerFCMToken(fcmToken, deviceInfo);
+      bool success = await registerFCMToken();
+
+      if (!success) {
+        throw Exception('Failed to register FCM token');
+      }
 
       // Update local settings to show push as enabled immediately
       if (_settings != null) {
@@ -104,11 +151,18 @@ class NotificationProvider extends ChangeNotifier {
 
       // Refresh settings to get updated status from server
       await fetchNotificationSettings();
+
+      if (kDebugMode) {
+        print('✅ Push notifications enabled successfully');
+      }
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error enabling push notifications: $e');
+      }
       _error = e.toString();
       // Revert local change if error occurred
       if (_settings != null) {
-        _settings = _settings!.copyWith(pushEnabled: true);
+        _settings = _settings!.copyWith(pushEnabled: false);
         notifyListeners();
       }
     } finally {
@@ -117,61 +171,159 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
+  /// Update notification setting (toggle push/email for specific category)
   Future<void> updateNotificationSetting(
-    String category,
-    String type,
-    bool value,
-  ) async {
+      String category,
+      String type, // 'push' or 'email'
+      bool value,
+      ) async {
     if (_settings == null) return;
 
-    // Create topic name based on category
-    final topicName = _getTopicName(category);
+    if (kDebugMode) {
+      print('🔄 Updating $category -> $type to $value');
+    }
 
     // Add to processing set
-    _processingTopics.add(topicName);
+    _processingCategories.add(category);
 
     // Update local setting immediately for responsive UI
     _updateLocalSetting(category, type, value);
     notifyListeners();
 
     try {
-      if (value) {
-        // Subscribe to topic
-        await subscribeToTopic(topicName);
-      } else {
-        // Unsubscribe from topic
-        await unsubscribeFromTopic(topicName);
+      // Call update API
+      await _updateNotificationPreferences();
+      if (kDebugMode) {
+        print('✅ Successfully updated $category -> $type to $value');
       }
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error updating $category -> $type: $e');
+      }
       // Revert local change if API call failed
       _updateLocalSetting(category, type, !value);
       _error = 'Failed to update notification setting: ${e.toString()}';
     } finally {
       // Remove from processing set
-      _processingTopics.remove(topicName);
+      _processingCategories.remove(category);
       notifyListeners();
     }
   }
 
-  String _getTopicName(String category) {
-    // Map category to topic name - adjust these based on your backend topic naming
-    switch (category) {
-      case 'tournament_updates':
-        return 'tournament_updates';
-      case 'match_notifications':
-        return 'match_notifications';
-      case 'team_updates':
-        return 'team_updates';
-      case 'payment_confirmations':
-        return 'payment_confirmations';
-      case 'chat_messages':
-        return 'chat_messages';
-      case 'general_announcements':
-        return 'general_announcements';
-      case 'marketing_updates':
-        return 'marketing_updates';
-      default:
-        return category;
+  Future<void> _updateNotificationPreferences() async {
+    if (_settings == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+
+    if (token == null) {
+      throw Exception('No authentication token found');
+    }
+
+    final requestBody = {
+      'push_enabled': _settings!.pushEnabled,
+      'tournament_updates': _settings!.tournamentUpdates,
+      'match_notifications': _settings!.matchNotifications,
+      'team_updates': _settings!.teamUpdates,
+      'payment_confirmations': _settings!.paymentConfirmations,
+      'general_announcements': _settings!.generalAnnouncements,
+      'chat_messages': _settings!.chatMessages,
+      'marketing_updates': _settings!.marketingUpdates,
+    };
+
+    if (kDebugMode) {
+      print('📤 Sending PUT request to update preferences');
+      print('📤 Request body: ${json.encode(requestBody)}');
+    }
+
+
+    final response = await http.put(
+      Uri.parse(AppApis.updateNotificationPreferences),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: json.encode(requestBody),
+    );
+
+    if (kDebugMode) {
+      print('📥 Update response status: ${response.statusCode}');
+      print('📥 Update response body: ${response.body}');
+    }
+
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update notification preferences: ${response.statusCode}');
+    }
+  }
+
+  /// Logout FCM - call this when user logs out
+  Future<void> logoutFCM() async {
+    if (kDebugMode) {
+      print('🚪 Logging out FCM...');
+    }
+
+    try {
+      final deviceInfo = await _getDeviceInfo();
+      final deviceId = deviceInfo['deviceId'];
+
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+
+      if (token == null) {
+        if (kDebugMode) {
+          print('⚠️ No auth token found for FCM logout');
+        }
+        return;
+      }
+
+      if (kDebugMode) {
+        print('📤 Sending FCM logout request for device: $deviceId');
+      }
+
+      final response = await http.post(
+        Uri.parse(AppApis.logoutFCM), // You need to add this to your AppApis
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'device_id': deviceId,
+        }),
+      );
+
+      if (kDebugMode) {
+        print('📥 FCM logout response status: ${response.statusCode}');
+        print('📥 FCM logout response body: ${response.body}');
+      }
+
+
+      if (response.statusCode == 200) {
+        if (kDebugMode) {
+          print('✅ FCM logout successful');
+        }
+
+        // Clear local notification settings
+        _settings = null;
+        _error = null;
+        notifyListeners();
+
+        // Unsubscribe from all FCM topics
+        final messaging = FirebaseMessaging.instance;
+        await messaging.deleteToken();
+        if (kDebugMode) {
+          print('🗑️ FCM token deleted locally');
+        }
+
+      } else {
+        if (kDebugMode) {
+          print('❌ FCM logout failed: ${response.statusCode}');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error during FCM logout: $e');
+      }
     }
   }
 
@@ -182,8 +334,7 @@ class NotificationProvider extends ChangeNotifier {
       final androidInfo = await deviceInfo.androidInfo;
       return {
         'deviceType': 'android',
-        'deviceId':
-            'android_${androidInfo.id}_${DateTime.now().millisecondsSinceEpoch}',
+        'deviceId': 'android_${androidInfo.id}_${DateTime.now().millisecondsSinceEpoch}',
         'browser': null,
         'os': 'Android ${androidInfo.version.release}',
       };
@@ -191,8 +342,7 @@ class NotificationProvider extends ChangeNotifier {
       final iosInfo = await deviceInfo.iosInfo;
       return {
         'deviceType': 'ios',
-        'deviceId':
-            'ios_${iosInfo.identifierForVendor}_${DateTime.now().millisecondsSinceEpoch}',
+        'deviceId': 'ios_${iosInfo.identifierForVendor}_${DateTime.now().millisecondsSinceEpoch}',
         'browser': null,
         'os': 'iOS ${iosInfo.systemVersion}',
       };
@@ -208,15 +358,29 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   Future<void> _registerFCMToken(
-    String fcmToken,
-    Map<String, dynamic> deviceInfo,
-  ) async {
+      String fcmToken,
+      Map<String, dynamic> deviceInfo,
+      ) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
 
     if (token == null) {
       throw Exception('No authentication token found');
     }
+
+    final requestBody = {
+      'token': fcmToken,
+      'deviceType': deviceInfo['deviceType'],
+      'deviceId': deviceInfo['deviceId'],
+      'browser': deviceInfo['browser'],
+      'os': deviceInfo['os'],
+    };
+
+    if (kDebugMode) {
+      print('📤 Registering FCM token with server');
+      print('📤 Request body: ${json.encode(requestBody)}');
+    }
+
 
     final response = await http.post(
       Uri.parse(AppApis.registerFCM),
@@ -224,70 +388,26 @@ class NotificationProvider extends ChangeNotifier {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-      body: json.encode({
-        'token': fcmToken,
-        'deviceType': deviceInfo['deviceType'],
-        'deviceId': deviceInfo['deviceId'],
-        'browser': deviceInfo['browser'],
-        'os': deviceInfo['os'],
-      }),
+      body: json.encode(requestBody),
     );
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to register FCM token');
-    }
-  }
-
-  Future<void> subscribeToTopic(String topic) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
-
-    if (token == null) {
-      throw Exception('No authentication token found');
+    if (kDebugMode) {
+      print('📥 FCM registration response status: ${response.statusCode}');
+      print('📥 FCM registration response body: ${response.body}');
     }
 
-    final response = await http.post(
-      Uri.parse(AppApis.subscribeToFCM),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: json.encode({
-        'topics': [topic],
-      }),
-    );
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to subscribe to topic');
-    }
-  }
-
-  Future<void> unsubscribeFromTopic(String topic) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
-
-    if (token == null) {
-      throw Exception('No authentication token found');
-    }
-
-    final response = await http.post(
-      Uri.parse(AppApis.unsubscribeToFCM),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: json.encode({
-        'topics': [topic],
-      }),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('Failed to unsubscribe from topic');
+      throw Exception('Failed to register FCM token: ${response.statusCode}');
     }
   }
 
   void _updateLocalSetting(String category, String type, bool value) {
     if (_settings == null) return;
+
+    if (kDebugMode) {
+      print('🔄 Updating local setting: $category -> $type = $value');
+    }
 
     switch (category) {
       case 'tournament_updates':

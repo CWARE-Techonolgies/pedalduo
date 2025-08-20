@@ -15,6 +15,7 @@ class ScheduleMatchDialog extends StatefulWidget {
   final String tournamentId;
   final DateTime tournamentStartDate;
   final DateTime tournamentEndDate;
+  final bool isFinal;
 
   const ScheduleMatchDialog({
     super.key,
@@ -22,6 +23,7 @@ class ScheduleMatchDialog extends StatefulWidget {
     required this.tournamentId,
     required this.tournamentStartDate,
     required this.tournamentEndDate,
+    required this.isFinal,
   });
 
   @override
@@ -31,13 +33,19 @@ class ScheduleMatchDialog extends StatefulWidget {
 class _ScheduleMatchDialogState extends State<ScheduleMatchDialog> {
   DateTime? selectedDate;
   TimeOfDay? selectedTime;
-  String selectedMatchType = 'one_set_6';
+  String? selectedMatchType; // Changed to nullable
+  bool isMatchTypeSelected = false;
   bool isLoading = false;
 
   final Map<String, String> matchTypeDisplayNames = {
     'full_match': 'Full Match (3 Sets)',
     'one_set_6': '1 Set of 6',
     'one_set_9': '1 Set of 9',
+  };
+  final Map<String, String> matchTypeDisplayNamesForFinal = {
+    'full_match': 'Full Match (3 Sets)',
+    // 'one_set_6': '1 Set of 6',
+    // 'one_set_9': '1 Set of 9',
   };
 
   @override
@@ -99,39 +107,53 @@ class _ScheduleMatchDialogState extends State<ScheduleMatchDialog> {
                       ),
                     ),
                     child: DropdownButtonFormField<String>(
-                      value: selectedMatchType,
+                      value: selectedMatchType, // Now nullable, will be null initially
                       decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         border: InputBorder.none,
-                        hintStyle: TextStyle(
-                          color: AppColors.textTertiaryColor,
-                        ),
+                        hintStyle: TextStyle(color: AppColors.textTertiaryColor),
                       ),
                       dropdownColor: AppColors.darkSecondaryColor,
                       style: AppTexts.bodyTextStyle(
                         context: context,
-                        textColor: AppColors.textPrimaryColor,
+                        textColor: isMatchTypeSelected
+                            ? AppColors.textPrimaryColor
+                            : AppColors.textTertiaryColor,
                       ),
-                      items:
-                          matchTypeDisplayNames.entries.map((entry) {
-                            return DropdownMenuItem<String>(
-                              value: entry.key,
-                              child: Text(
-                                entry.value,
-                                style: AppTexts.bodyTextStyle(
-                                  context: context,
-                                  textColor: AppColors.textPrimaryColor,
-                                ),
-                              ),
-                            );
-                          }).toList(),
+                      hint: Text(
+                        'Select Match Type',
+                        style: AppTexts.bodyTextStyle(
+                          context: context,
+                          textColor: AppColors.textTertiaryColor,
+                        ),
+                      ),
+                      items: (widget.isFinal
+                          ? matchTypeDisplayNamesForFinal
+                          : matchTypeDisplayNames
+                      ).entries.map((entry) {
+                        final isDisabled = widget.isFinal && entry.key != 'full_match';
+                        return DropdownMenuItem<String>(
+                          value: entry.key,
+                          enabled: !isDisabled,
+                          child: Text(
+                            entry.value,
+                            style: AppTexts.bodyTextStyle(
+                              context: context,
+                              textColor: isDisabled
+                                  ? AppColors.textTertiaryColor
+                                  : AppColors.textPrimaryColor,
+                            ),
+                          ),
+                        );
+                      }).toList(),
                       onChanged: (String? newValue) {
+                        if (widget.isFinal && newValue != 'full_match') {
+                          return;
+                        }
                         if (newValue != null) {
                           setState(() {
                             selectedMatchType = newValue;
+                            isMatchTypeSelected = true;
                           });
                         }
                       },
@@ -175,15 +197,15 @@ class _ScheduleMatchDialogState extends State<ScheduleMatchDialog> {
                           Text(
                             selectedDate != null
                                 ? DateFormat(
-                                  'MMM dd, yyyy',
-                                ).format(selectedDate!)
+                              'MMM dd, yyyy',
+                            ).format(selectedDate!)
                                 : 'Select Date',
                             style: AppTexts.bodyTextStyle(
                               context: context,
                               textColor:
-                                  selectedDate != null
-                                      ? AppColors.textPrimaryColor
-                                      : AppColors.textTertiaryColor,
+                              selectedDate != null
+                                  ? AppColors.textPrimaryColor
+                                  : AppColors.textTertiaryColor,
                             ),
                           ),
                         ],
@@ -232,9 +254,9 @@ class _ScheduleMatchDialogState extends State<ScheduleMatchDialog> {
                             style: AppTexts.bodyTextStyle(
                               context: context,
                               textColor:
-                                  selectedTime != null
-                                      ? AppColors.textPrimaryColor
-                                      : AppColors.textTertiaryColor,
+                              selectedTime != null
+                                  ? AppColors.textPrimaryColor
+                                  : AppColors.textTertiaryColor,
                             ),
                           ),
                         ],
@@ -280,24 +302,24 @@ class _ScheduleMatchDialogState extends State<ScheduleMatchDialog> {
                             elevation: 0,
                           ),
                           child:
-                              isLoading
-                                  ? SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        AppColors.whiteColor,
-                                      ),
-                                    ),
-                                  )
-                                  : Text(
-                                    'Schedule Match',
-                                    style: AppTexts.bodyTextStyle(
-                                      context: context,
-                                      textColor: AppColors.whiteColor,
-                                    ),
-                                  ),
+                          isLoading
+                              ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.whiteColor,
+                              ),
+                            ),
+                          )
+                              : Text(
+                            'Schedule Match',
+                            style: AppTexts.bodyTextStyle(
+                              context: context,
+                              textColor: AppColors.whiteColor,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -352,13 +374,13 @@ class _ScheduleMatchDialogState extends State<ScheduleMatchDialog> {
       context: context,
       builder:
           (context) => CustomDatePickerDialog(
-            initialDate:
-                widget.tournamentStartDate.isAfter(DateTime.now())
-                    ? widget.tournamentStartDate
-                    : DateTime.now(),
-            firstDate: widget.tournamentStartDate,
-            lastDate: widget.tournamentEndDate,
-          ),
+        initialDate:
+        widget.tournamentStartDate.isAfter(DateTime.now())
+            ? widget.tournamentStartDate
+            : DateTime.now(),
+        firstDate: widget.tournamentStartDate,
+        lastDate: widget.tournamentEndDate,
+      ),
     );
   }
 
@@ -371,6 +393,16 @@ class _ScheduleMatchDialogState extends State<ScheduleMatchDialog> {
   }
 
   Future<void> _scheduleMatch() async {
+    // Check if match type is selected
+    if (selectedMatchType == null) {
+      AppUtils.showFailureDialog(
+        context,
+        'Failed to Schedule Match',
+        'Please select a match type',
+      );
+      return;
+    }
+
     if (selectedDate == null || selectedTime == null) {
       AppUtils.showFailureDialog(
         context,
@@ -401,7 +433,7 @@ class _ScheduleMatchDialogState extends State<ScheduleMatchDialog> {
         widget.match.id,
         formattedDate,
         widget.tournamentId,
-        selectedMatchType,
+        selectedMatchType!, // Now we're sure it's not null
       );
 
       if (mounted) {
@@ -457,7 +489,7 @@ class _ScheduleMatchDialogState extends State<ScheduleMatchDialog> {
   }
 }
 
-// Custom Date Picker Dialog
+// Custom Date Picker Dialog remains the same
 class CustomDatePickerDialog extends StatefulWidget {
   final DateTime initialDate;
   final DateTime firstDate;
@@ -589,22 +621,22 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     return Row(
       children:
-          daysOfWeek
-              .map(
-                (day) => Expanded(
-                  child: Center(
-                    child: Text(
-                      day,
-                      style: TextStyle(
-                        color: AppColors.textSecondaryColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
+      daysOfWeek
+          .map(
+            (day) => Expanded(
+          child: Center(
+            child: Text(
+              day,
+              style: TextStyle(
+                color: AppColors.textSecondaryColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+      )
+          .toList(),
     );
   }
 
@@ -626,8 +658,8 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
       final date = DateTime(displayedMonth.year, displayedMonth.month, day);
       final isSelected =
           date.day == selectedDate.day &&
-          date.month == selectedDate.month &&
-          date.year == selectedDate.year;
+              date.month == selectedDate.month &&
+              date.year == selectedDate.year;
       final isEnabled =
           !date.isBefore(widget.firstDate) && !date.isAfter(widget.lastDate);
 
@@ -654,21 +686,21 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
   }
 
   Widget _buildDayWidget(
-    int day,
-    DateTime date,
-    bool isSelected,
-    bool isEnabled,
-  ) {
+      int day,
+      DateTime date,
+      bool isSelected,
+      bool isEnabled,
+      ) {
     return Expanded(
       child: GestureDetector(
         onTap:
-            isEnabled
-                ? () {
-                  setState(() {
-                    selectedDate = date;
-                  });
-                }
-                : null,
+        isEnabled
+            ? () {
+          setState(() {
+            selectedDate = date;
+          });
+        }
+            : null,
         child: Container(
           height: 40,
           margin: const EdgeInsets.all(2),
@@ -676,20 +708,20 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
             color: isSelected ? AppColors.primaryColor : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border:
-                isSelected
-                    ? null
-                    : Border.all(color: Colors.transparent, width: 1),
+            isSelected
+                ? null
+                : Border.all(color: Colors.transparent, width: 1),
           ),
           child: Center(
             child: Text(
               day.toString(),
               style: TextStyle(
                 color:
-                    isEnabled
-                        ? (isSelected
-                            ? AppColors.whiteColor
-                            : AppColors.textPrimaryColor)
-                        : AppColors.textTertiaryColor,
+                isEnabled
+                    ? (isSelected
+                    ? AppColors.whiteColor
+                    : AppColors.textPrimaryColor)
+                    : AppColors.textTertiaryColor,
                 fontSize: 14,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
@@ -769,12 +801,12 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
   }
 }
 
-// Custom Time Picker Dialog
+// Custom Time Picker Dialog remains the same
 class CustomTimePickerDialog extends StatefulWidget {
   final TimeOfDay initialTime;
 
   const CustomTimePickerDialog({Key? key, required this.initialTime})
-    : super(key: key);
+      : super(key: key);
 
   @override
   State<CustomTimePickerDialog> createState() => _CustomTimePickerDialogState();
@@ -988,12 +1020,12 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
                             : value.toString(),
                         style: TextStyle(
                           color:
-                              isSelected
-                                  ? AppColors.primaryColor
-                                  : AppColors.textSecondaryColor,
+                          isSelected
+                              ? AppColors.primaryColor
+                              : AppColors.textSecondaryColor,
                           fontSize: 18,
                           fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
                         ),
                       ),
                     );
@@ -1044,9 +1076,9 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
                         width: double.infinity,
                         decoration: BoxDecoration(
                           color:
-                              isAM
-                                  ? AppColors.primaryColor.withOpacity(0.2)
-                                  : Colors.transparent,
+                          isAM
+                              ? AppColors.primaryColor.withOpacity(0.2)
+                              : Colors.transparent,
                           borderRadius: const BorderRadius.only(
                             topLeft: Radius.circular(12),
                             topRight: Radius.circular(12),
@@ -1057,12 +1089,12 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
                             'AM',
                             style: TextStyle(
                               color:
-                                  isAM
-                                      ? AppColors.primaryColor
-                                      : AppColors.textSecondaryColor,
+                              isAM
+                                  ? AppColors.primaryColor
+                                  : AppColors.textSecondaryColor,
                               fontSize: 18,
                               fontWeight:
-                                  isAM ? FontWeight.w600 : FontWeight.normal,
+                              isAM ? FontWeight.w600 : FontWeight.normal,
                             ),
                           ),
                         ),
@@ -1081,9 +1113,9 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
                         width: double.infinity,
                         decoration: BoxDecoration(
                           color:
-                              !isAM
-                                  ? AppColors.primaryColor.withOpacity(0.2)
-                                  : Colors.transparent,
+                          !isAM
+                              ? AppColors.primaryColor.withOpacity(0.2)
+                              : Colors.transparent,
                           borderRadius: const BorderRadius.only(
                             bottomLeft: Radius.circular(12),
                             bottomRight: Radius.circular(12),
@@ -1094,12 +1126,12 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
                             'PM',
                             style: TextStyle(
                               color:
-                                  !isAM
-                                      ? AppColors.primaryColor
-                                      : AppColors.textSecondaryColor,
+                              !isAM
+                                  ? AppColors.primaryColor
+                                  : AppColors.textSecondaryColor,
                               fontSize: 18,
                               fontWeight:
-                                  !isAM ? FontWeight.w600 : FontWeight.normal,
+                              !isAM ? FontWeight.w600 : FontWeight.normal,
                             ),
                           ),
                         ),
@@ -1142,9 +1174,9 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
           child: ElevatedButton(
             onPressed: () {
               final hour =
-                  isAM
-                      ? (selectedHour == 12 ? 0 : selectedHour)
-                      : (selectedHour == 12 ? 12 : selectedHour + 12);
+              isAM
+                  ? (selectedHour == 12 ? 0 : selectedHour)
+                  : (selectedHour == 12 ? 12 : selectedHour + 12);
 
               final timeOfDay = TimeOfDay(hour: hour, minute: selectedMinute);
               Navigator.of(context).pop(timeOfDay);

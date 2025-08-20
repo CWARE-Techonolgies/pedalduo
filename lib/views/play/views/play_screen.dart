@@ -128,27 +128,6 @@ class PlayScreen extends StatelessWidget {
               children: [
                 _buildGlassmorphicActionButton(
                   context: context,
-                  icon: CupertinoIcons.bubble_left_bubble_right_fill,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.blueColor.withOpacity(0.8),
-                      AppColors.purpleColor.withOpacity(0.6),
-                    ],
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      CupertinoPageRoute(
-                        builder: (_) => ChatRoomsScreen(refresh: false),
-                      ),
-                    );
-                  },
-                ),
-                SizedBox(width: screenWidth * 0.02),
-                _buildGlassmorphicActionButton(
-                  context: context,
                   icon: Icons.add_rounded,
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -192,78 +171,78 @@ class PlayScreen extends StatelessWidget {
             ),
 
             // Enhanced Search Bar with Glassmorphism
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: screenWidth * 0.04,
-                vertical: screenHeight * 0.02,
-              ),
-              child: Container(
-                height: screenHeight * 0.065,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(screenWidth * 0.08),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.lightNavyBlueGrey.withOpacity(0.7),
-                      AppColors.navyBlueGrey.withOpacity(0.5),
-                    ],
-                  ),
-                  border: Border.all(
-                    color: AppColors.lightOrangeColor.withOpacity(0.2),
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.lightOrangeColor.withOpacity(0.1),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(screenWidth * 0.08),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: TextField(
-                      style: AppTexts.bodyTextStyle(
-                        context: context,
-                        textColor: AppColors.whiteColor,
-                        fontSize: AppFontSizes(context).size14,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Search tournaments or fields...',
-                        hintStyle: AppTexts.bodyTextStyle(
-                          context: context,
-                          textColor: AppColors.greyColor.withOpacity(0.8),
-                          fontSize: AppFontSizes(context).size14,
-                        ),
-                        prefixIcon: Container(
-                          padding: EdgeInsets.all(screenWidth * 0.02),
-                          child: Icon(
-                            Icons.search_rounded,
-                            color: AppColors.lightOrangeColor.withOpacity(0.8),
-                            size: screenWidth * 0.05,
-                          ),
-                        ),
-                        suffixIcon: Container(
-                          padding: EdgeInsets.all(screenWidth * 0.02),
-                          child: Icon(
-                            Icons.tune_rounded,
-                            color: AppColors.darkOrangeColor.withOpacity(0.8),
-                            size: screenWidth * 0.05,
-                          ),
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(
-                          vertical: screenHeight * 0.018,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            // Padding(
+            //   padding: EdgeInsets.symmetric(
+            //     horizontal: screenWidth * 0.04,
+            //     vertical: screenHeight * 0.02,
+            //   ),
+            //   child: Container(
+            //     height: screenHeight * 0.065,
+            //     decoration: BoxDecoration(
+            //       borderRadius: BorderRadius.circular(screenWidth * 0.08),
+            //       gradient: LinearGradient(
+            //         begin: Alignment.topLeft,
+            //         end: Alignment.bottomRight,
+            //         colors: [
+            //           AppColors.lightNavyBlueGrey.withOpacity(0.7),
+            //           AppColors.navyBlueGrey.withOpacity(0.5),
+            //         ],
+            //       ),
+            //       border: Border.all(
+            //         color: AppColors.lightOrangeColor.withOpacity(0.2),
+            //         width: 1,
+            //       ),
+            //       boxShadow: [
+            //         BoxShadow(
+            //           color: AppColors.lightOrangeColor.withOpacity(0.1),
+            //           blurRadius: 20,
+            //           offset: const Offset(0, 10),
+            //         ),
+            //       ],
+            //     ),
+            //     child: ClipRRect(
+            //       borderRadius: BorderRadius.circular(screenWidth * 0.08),
+            //       child: BackdropFilter(
+            //         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            //         child: TextField(
+            //           style: AppTexts.bodyTextStyle(
+            //             context: context,
+            //             textColor: AppColors.whiteColor,
+            //             fontSize: AppFontSizes(context).size14,
+            //           ),
+            //           decoration: InputDecoration(
+            //             hintText: 'Search tournaments or fields...',
+            //             hintStyle: AppTexts.bodyTextStyle(
+            //               context: context,
+            //               textColor: AppColors.greyColor.withOpacity(0.8),
+            //               fontSize: AppFontSizes(context).size14,
+            //             ),
+            //             prefixIcon: Container(
+            //               padding: EdgeInsets.all(screenWidth * 0.02),
+            //               child: Icon(
+            //                 Icons.search_rounded,
+            //                 color: AppColors.lightOrangeColor.withOpacity(0.8),
+            //                 size: screenWidth * 0.05,
+            //               ),
+            //             ),
+            //             suffixIcon: Container(
+            //               padding: EdgeInsets.all(screenWidth * 0.02),
+            //               child: Icon(
+            //                 Icons.tune_rounded,
+            //                 color: AppColors.darkOrangeColor.withOpacity(0.8),
+            //                 size: screenWidth * 0.05,
+            //               ),
+            //             ),
+            //             border: InputBorder.none,
+            //             contentPadding: EdgeInsets.symmetric(
+            //               vertical: screenHeight * 0.018,
+            //             ),
+            //           ),
+            //         ),
+            //       ),
+            //     ),
+            //   ),
+            // ),
 
             // Enhanced Tab Bar with Glassmorphism
             Consumer<TournamentProvider>(
@@ -299,39 +278,28 @@ class PlayScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(screenWidth * 0.05),
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Padding(
-                        padding: EdgeInsets.all(screenWidth * 0.01),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: _buildEnhancedTabButton(
-                                context: context,
-                                title: 'Tournaments',
-                                icon: Icons.emoji_events_rounded,
-                                isSelected: provider.selectedTabIndex == 0,
-                                onTap: () => provider.setSelectedTab(0),
-                              ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _buildEnhancedTabButton(
+                              context: context,
+                              title: 'Tournaments',
+                              icon: Icons.emoji_events_rounded,
+                              isSelected: provider.selectedTabIndex == 0,
+                              onTap: () => provider.setSelectedTab(0),
                             ),
-                            Expanded(
-                              child: _buildEnhancedTabButton(
-                                context: context,
-                                title: 'Teams',
-                                icon: Icons.groups_rounded,
-                                isSelected: provider.selectedTabIndex == 1,
-                                onTap: () => provider.setSelectedTab(1),
-                              ),
+                          ),
+
+                          Expanded(
+                            child: _buildEnhancedTabButton(
+                              context: context,
+                              title: 'Matches',
+                              icon: Icons.sports_soccer_rounded,
+                              isSelected: provider.selectedTabIndex == 2,
+                              onTap: () => provider.setSelectedTab(2),
                             ),
-                            Expanded(
-                              child: _buildEnhancedTabButton(
-                                context: context,
-                                title: 'Matches',
-                                icon: Icons.sports_soccer_rounded,
-                                isSelected: provider.selectedTabIndex == 2,
-                                onTap: () => provider.setSelectedTab(2),
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

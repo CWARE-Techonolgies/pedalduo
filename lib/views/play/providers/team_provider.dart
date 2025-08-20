@@ -39,6 +39,16 @@ class TeamProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> handleCopyInviteLink(String teamId) async {
+    try {
+      await _teamService.copyAndShareInviteLink(teamId);
+      _error = null;
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    }
+  }
   void clearTeams() {
     _captainTeams = [];
     _playerTeams = [];

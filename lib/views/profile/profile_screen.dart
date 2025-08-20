@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:pedalduo/views/profile/settings/settings_screen.dart';
@@ -6,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../style/colors.dart';
 import '../../style/fonts_sizes.dart';
 import '../../style/texts.dart';
+import '../../utils/app_utils.dart';
 import '../play/providers/user_profile_provider.dart';
 import 'ccoins_screen.dart';
 import 'padelduo_pro_screen.dart';
@@ -46,10 +49,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // Header Profile Section
             Consumer<UserProfileProvider>(
               builder: (
-                  BuildContext context,
-                  UserProfileProvider userProvider,
-                  Widget? child,
-                  ) {
+                BuildContext context,
+                UserProfileProvider userProvider,
+                Widget? child,
+              ) {
                 final user = userProvider.user;
                 return Container(
                   margin: const EdgeInsets.all(16),
@@ -108,69 +111,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                           ),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      AppColors.accentPurpleColor,
-                                      AppColors.accentBlueColor,
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(25),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.accentPurpleColor.withOpacity(0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.star,
-                                      color: AppColors.textPrimaryColor,
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'PadelDuo+',
-                                      style: AppTexts.bodyTextStyle(
-                                        context: context,
-                                        textColor: AppColors.textPrimaryColor,
-                                        fontSize: AppFontSizes(context).size12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: AppColors.glassColor,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: AppColors.glassBorderColor,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.share,
-                                  color: AppColors.textPrimaryColor,
-                                  size: 20,
-                                ),
-                              ),
-                            ],
-                          ),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -194,17 +134,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ],
                         ),
                         alignment: Alignment.center,
-                        child: Text(
-                          (user?.name.isNotEmpty ?? false)
-                              ? user!.name[0].toUpperCase()
-                              : '?',
-                          style: AppTexts.emphasizedTextStyle(
-                            context: context,
-                            textColor: AppColors.primaryColor,
-                            fontSize: 40,
-                          ),
+                        child: ClipOval(
+                          child:
+                              (user?.imageUrl != null &&
+                                      user!.imageUrl!.isNotEmpty)
+                                  ? Image.memory(
+                                    base64Decode(
+                                      _extractBase64(user!.imageUrl!),
+                                    ),
+                                    width: 90,
+                                    height: 90,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      // Fallback to initial if image fails to load
+                                      return _buildFallbackText(context, user);
+                                    },
+                                  )
+                                  : _buildFallbackText(context, user),
                         ),
                       ),
+
                       const SizedBox(height: 16),
                       // Name and Username
                       Text(
@@ -226,23 +175,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Pakistan • Professional Player',
+                        '${user?.country}'
+                        ' • '
+                        'Professional Player'
+                        ' • '
+                        '${user?.gender[0].toUpperCase()}${user?.gender.substring(1).toLowerCase()}',
                         style: AppTexts.bodyTextStyle(
                           context: context,
                           textColor: AppColors.textSecondaryColor,
                           fontSize: AppFontSizes(context).size14,
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      // Stats Row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildStatItem('SERVE: 90'),
-                          _buildStatItem('VOLLEY: 85'),
-                          _buildStatItem('SMASH: 88'),
-                          _buildStatItem('DEFENSE: 92'),
-                        ],
                       ),
                     ],
                   ),
@@ -268,7 +210,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       context,
                       'PadelDuo+',
                       Icons.workspace_premium_outlined,
-                      onTap: () => _navigateToPadelDuoPlus(context),
+                      // onTap: () => _navigateToPadelDuoPlus(context),
+                      onTap: () {
+                        AppUtils.showInfoDialog(
+                          context,
+                          'Coming Soon', // title
+                          'This feature is coming soon.', // message
+                          buttonText: 'Got It',
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -277,50 +227,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       context,
                       'P Coins',
                       Icons.monetization_on_outlined,
-                      onTap: () => _navigateToPCoins(context),
+                      // onTap: () => _navigateToPCoins(context),
+                      onTap: () {
+                        AppUtils.showInfoDialog(
+                          context,
+                          'Coming Soon', // title
+                          'This feature is coming soon.', // message
+                          buttonText: 'Got It',
+                        );
+                      },
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            // Stats Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildStatColumn('24', 'Posts', AppColors.primaryColor),
-                  _buildStatColumn('128', 'Following', AppColors.primaryColor),
-                  _buildStatColumn('1.2k', 'Followers', AppColors.primaryColor),
-                  _buildStatColumn('5.4k', 'Views', AppColors.primaryColor),
-                ],
-              ),
+            const SizedBox(height: 8),
+
+            Consumer<UserProfileProvider>(
+              builder: (
+                BuildContext context,
+                UserProfileProvider value,
+                Widget? child,
+              ) {
+                return _buildTabContent(value);
+              },
             ),
-            const SizedBox(height: 24),
-            // Tab Bar
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: AppColors.glassColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.glassBorderColor,
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  _buildTabItem('Stats', 0),
-                  _buildTabItem('Posts', 1),
-                  _buildTabItem('Dashboard', 2),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Tab Content
-            _buildTabContent(),
             const SizedBox(height: 32),
           ],
         ),
@@ -341,11 +272,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildNavButton(
-      BuildContext context,
-      String title,
-      IconData icon, {
-        VoidCallback? onTap,
-      }) {
+    BuildContext context,
+    String title,
+    IconData icon, {
+    VoidCallback? onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -353,10 +284,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         decoration: BoxDecoration(
           color: AppColors.glassColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: AppColors.glassBorderColor,
-            width: 1,
-          ),
+          border: Border.all(color: AppColors.glassBorderColor, width: 1),
           boxShadow: [
             BoxShadow(
               color: AppColors.blackColor.withOpacity(0.1),
@@ -384,81 +312,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildStatColumn(String value, String label, Color color) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: AppTexts.emphasizedTextStyle(
-            context: context,
-            textColor: color,
-            fontSize: AppFontSizes(context).size18,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: AppTexts.bodyTextStyle(
-            context: context,
-            textColor: AppColors.textTertiaryColor,
-            fontSize: AppFontSizes(context).size12,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTabItem(String title, int index) {
-    bool isSelected = _selectedTabIndex == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _selectedTabIndex = index),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.primaryColor.withOpacity(0.8)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: isSelected ? [
-              BoxShadow(
-                color: AppColors.primaryColor.withOpacity(0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ] : null,
-          ),
-          child: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: AppTexts.bodyTextStyle(
-              context: context,
-              textColor: isSelected
-                  ? AppColors.textPrimaryColor
-                  : AppColors.textTertiaryColor,
-              fontSize: AppFontSizes(context).size14,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabContent() {
+  Widget _buildTabContent(UserProfileProvider userProvider) {
     switch (_selectedTabIndex) {
       case 0:
-        return _buildStatsTab();
+        return _buildStatsTab(userProvider);
       case 1:
         return _buildPostsTab();
-      case 2:
-        return _buildDashboardTab();
       default:
-        return _buildStatsTab();
+        return _buildStatsTab(userProvider);
     }
   }
 
-  Widget _buildStatsTab() {
+  Widget _buildStatsTab(UserProfileProvider userProvider) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -475,35 +340,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(child: _buildStatCard('Matches Played', '42')),
+              Expanded(
+                child: _buildStatCard(
+                  'Tournaments Played',
+                  userProvider.user?.tournamentsPlayed.toString() ?? '0',
+                ),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: _buildStatCard('Win Rate', '68%')),
+              Expanded(
+                child: _buildStatCard(
+                  'Win Rate',
+                  '${((userProvider.user?.firstPlaceWins ?? 0) / 100).toStringAsFixed(2)} %',
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _buildStatCard('Sets Won', '89')),
+              Expanded(
+                child: _buildStatCard(
+                  'Tournament Won',
+                  userProvider.user?.firstPlaceWins.toString() ?? '0',
+                ),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: _buildStatCard('Aces Served', '156')),
+              // Expanded(child: _buildStatCard('Aces Served', '156')),
+              Expanded(
+                child: _buildStatCard(
+                  'Runner Up',
+                  userProvider.user?.secondPlaceWins.toString()??'0',
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 24),
-          Text(
-            'Skills Assessment',
-            style: AppTexts.emphasizedTextStyle(
-              context: context,
-              textColor: AppColors.textPrimaryColor,
-              fontSize: AppFontSizes(context).size16,
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildSkillBar('Serve Power', 90),
-          _buildSkillBar('Volleys', 85),
-          _buildSkillBar('Smash Technique', 88),
-          _buildSkillBar('Court Defense', 92),
-          _buildSkillBar('Net Play', 78),
-          _buildSkillBar('Backhand', 82),
+          // Text(
+          //   'Skills Assessment',
+          //   style: AppTexts.emphasizedTextStyle(
+          //     context: context,
+          //     textColor: AppColors.textPrimaryColor,
+          //     fontSize: AppFontSizes(context).size16,
+          //   ),
+          // ),
+          // const SizedBox(height: 16),
+          // _buildSkillBar('Serve Power', 90),
+          // _buildSkillBar('Volleys', 85),
+          // _buildSkillBar('Smash Technique', 88),
+          // _buildSkillBar('Court Defense', 92),
+          // _buildSkillBar('Net Play', 78),
+          // _buildSkillBar('Backhand', 82),
         ],
       ),
     );
@@ -516,39 +402,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(
         color: AppColors.glassColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.glassBorderColor,
-          width: 1,
-        ),
+        border: Border.all(color: AppColors.glassBorderColor, width: 1),
       ),
       child: Center(
         child: Text(
-          'Posts content will be here',
-          style: AppTexts.bodyTextStyle(
-            context: context,
-            textColor: AppColors.textSecondaryColor,
-            fontSize: AppFontSizes(context).size16,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDashboardTab() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: AppColors.glassColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.glassBorderColor,
-          width: 1,
-        ),
-      ),
-      child: Center(
-        child: Text(
-          'Dashboard content will be here',
+          'This feature is coming soon',
           style: AppTexts.bodyTextStyle(
             context: context,
             textColor: AppColors.textSecondaryColor,
@@ -565,10 +423,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(
         color: AppColors.glassColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.glassBorderColor,
-          width: 1,
-        ),
+        border: Border.all(color: AppColors.glassBorderColor, width: 1),
         boxShadow: [
           BoxShadow(
             color: AppColors.blackColor.withOpacity(0.1),
@@ -676,6 +531,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const CCoinsScreen()),
+    );
+  }
+
+  // / Helper method to extract base64 data from data URL
+  String _extractBase64(String dataUrl) {
+    if (dataUrl.contains(',')) {
+      return dataUrl.split(',')[1];
+    }
+    return dataUrl;
+  }
+
+  Widget _buildFallbackText(BuildContext context, dynamic user) {
+    return Container(
+      width: 90,
+      height: 90,
+      color: AppColors.glassLightColor,
+      alignment: Alignment.center,
+      child: Text(
+        (user?.name?.isNotEmpty ?? false) ? user!.name![0].toUpperCase() : '?',
+        style: AppTexts.emphasizedTextStyle(
+          context: context,
+          textColor: AppColors.primaryColor,
+          fontSize: 40,
+        ),
+      ),
     );
   }
 }

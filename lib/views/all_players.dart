@@ -1,11 +1,14 @@
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:pedalduo/chat/chat_room.dart';
+import 'package:pedalduo/chat/chat_screen.dart';
+import 'package:pedalduo/utils/app_utils.dart';
 import 'package:provider/provider.dart';
-import '../chat/chat_room_provider.dart';
-import '../chat/chat_rooms_screen.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import '../models/all_players_models.dart';
-import '../providers/add_players_provider.dart';
+import '../providers/all_players_provider.dart';
+import '../services/shared_preference_service.dart';
 import '../style/colors.dart';
 import '../style/fonts_sizes.dart';
 import '../style/texts.dart';
@@ -25,7 +28,7 @@ class _AllPlayersState extends State<AllPlayers> {
     super.initState();
     // Load players when screen initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AddPlayersProvider>().loadPlayers();
+      context.read<AllPlayersProvider>().loadPlayers();
     });
     _searchController.addListener(_onSearchChanged);
   }
@@ -38,124 +41,84 @@ class _AllPlayersState extends State<AllPlayers> {
   }
 
   void _onSearchChanged() {
-    context.read<AddPlayersProvider>().filterPlayers(_searchController.text);
+    context.read<AllPlayersProvider>().filterPlayers(_searchController.text);
   }
 
   void _clearSearch() {
     _searchController.clear();
-    context.read<AddPlayersProvider>().clearSearch();
+    context.read<AllPlayersProvider>().clearSearch();
   }
 
-  Future<void> _onMessageTap(AllPlayersModel player) async {
-    final provider = context.read<AddPlayersProvider>();
-
-    // Show loading dialog
-    _showCreatingChatDialog(player.name);
-
-    // Create chat with user
-    final success = await provider.createChatWithUser(player.id, player.name);
-
-    // Hide loading dialog
-    if (mounted) {
-      Navigator.of(context).pop();
-    }
-
-    if (success) {
-      // Success - navigate to chat screen
-      if (mounted) {
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (context) => ChatRoomsScreen(refresh: true,)));
-      
-      }
-    } else {
-      // Show error message
-      if (mounted) {
-        _showErrorMessage('Failed to create chat with ${player.name}');
-      }
-    }
-  }
-
-  void _showCreatingChatDialog(String userName) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        final screenWidth = MediaQuery.of(context).size.width;
-
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(screenWidth * 0.04),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Container(
-                padding: EdgeInsets.all(screenWidth * 0.06),
-                decoration: BoxDecoration(
-                  color: AppColors.glassColor,
-                  borderRadius: BorderRadius.circular(screenWidth * 0.04),
-                  border: Border.all(
-                    color: AppColors.glassBorderColor,
-                    width: 1,
+  // Create skeleton card for loading state
+  Widget _buildSkeletonCard(double screenWidth, double screenHeight) {
+    return Container(
+      margin: EdgeInsets.only(bottom: screenHeight * 0.015),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(screenWidth * 0.03),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: Container(
+            padding: EdgeInsets.all(screenWidth * 0.04),
+            decoration: BoxDecoration(
+              color: AppColors.glassColor,
+              borderRadius: BorderRadius.circular(screenWidth * 0.03),
+              border: Border.all(color: AppColors.glassBorderColor, width: 1),
+            ),
+            child: Row(
+              children: [
+                // Avatar skeleton
+                Container(
+                  width: screenWidth * 0.12,
+                  height: screenWidth * 0.12,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.glassBorderColor.withOpacity(0.3),
                   ),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Loading indicator
-                    Container(
-                      width: screenWidth * 0.15,
-                      height: screenWidth * 0.15,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.primaryColor,
-                            AppColors.primaryLightColor,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(screenWidth * 0.075),
-                      ),
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            AppColors.textPrimaryColor,
-                          ),
-                          strokeWidth: 3,
+                SizedBox(width: screenWidth * 0.03),
+
+                // Info skeleton
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Name skeleton
+                      Container(
+                        width: screenWidth * 0.4,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: AppColors.glassBorderColor.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(4),
                         ),
                       ),
-                    ),
-                    SizedBox(height: screenWidth * 0.04),
-
-                    // Title
-                    Text(
-                      'Creating Chat',
-                      style: AppTexts.emphasizedTextStyle(
-                        context: context,
-                        textColor: AppColors.textPrimaryColor,
-                        fontSize: AppFontSizes(context).size18,
+                      SizedBox(height: screenHeight * 0.005),
+                      // Tournament info skeleton
+                      Container(
+                        width: screenWidth * 0.35,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: AppColors.glassBorderColor.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
                       ),
-                    ),
-                    SizedBox(height: screenWidth * 0.02),
-
-                    // Subtitle
-                    Text(
-                      'Starting conversation with $userName...',
-                      style: AppTexts.bodyTextStyle(
-                        context: context,
-                        textColor: AppColors.textSecondaryColor,
-                        fontSize: AppFontSizes(context).size14,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+
+                // Button skeleton
+                Container(
+                  width: screenWidth * 0.2,
+                  height: screenHeight * 0.04,
+                  decoration: BoxDecoration(
+                    color: AppColors.glassBorderColor.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(screenWidth * 0.02),
+                  ),
+                ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -192,11 +155,11 @@ class _AllPlayersState extends State<AllPlayers> {
           ),
         ),
       ),
-      body: Consumer<AddPlayersProvider>(
+      body: Consumer<AllPlayersProvider>(
         builder: (context, provider, child) {
           return Column(
             children: [
-              // Search Header with glass effect
+              // Search Header with glass effect - Skeleton when loading
               Container(
                 padding: EdgeInsets.all(screenWidth * 0.04),
                 decoration: BoxDecoration(
@@ -209,52 +172,66 @@ class _AllPlayersState extends State<AllPlayers> {
                     ],
                   ),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(screenWidth * 0.03),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.glassColor,
-                        borderRadius: BorderRadius.circular(screenWidth * 0.03),
-                        border: Border.all(
-                          color: AppColors.glassBorderColor,
-                          width: 1,
+                child: Skeletonizer(
+                  enabled: provider.isLoading,
+                  enableSwitchAnimation: true,
+                  effect: ShimmerEffect(
+                    baseColor: AppColors.glassColor,
+                    highlightColor: AppColors.glassBorderColor.withOpacity(0.6),
+                    duration: const Duration(milliseconds: 1200),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(screenWidth * 0.03),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.glassColor,
+                          borderRadius: BorderRadius.circular(
+                            screenWidth * 0.03,
+                          ),
+                          border: Border.all(
+                            color: AppColors.glassBorderColor,
+                            width: 1,
+                          ),
                         ),
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Search players by name, email, or phone',
-                          hintStyle: AppTexts.bodyTextStyle(
+                        child: TextField(
+                          controller: _searchController,
+                          enabled: !provider.isLoading,
+                          decoration: InputDecoration(
+                            hintText:
+                                'Search players by name, email or phone (+92)',
+                            hintStyle: AppTexts.bodyTextStyle(
+                              context: context,
+                              textColor: AppColors.textTertiaryColor,
+                              fontSize: AppFontSizes(context).size14,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: AppColors.primaryColor,
+                              size: screenWidth * 0.05,
+                            ),
+                            suffixIcon:
+                                provider.isSearching
+                                    ? IconButton(
+                                      icon: Icon(
+                                        Icons.clear,
+                                        color: AppColors.textSecondaryColor,
+                                      ),
+                                      onPressed: _clearSearch,
+                                    )
+                                    : null,
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: screenWidth * 0.04,
+                              vertical: screenHeight * 0.015,
+                            ),
+                          ),
+                          style: AppTexts.bodyTextStyle(
                             context: context,
-                            textColor: AppColors.textTertiaryColor,
+                            textColor: AppColors.textPrimaryColor,
                             fontSize: AppFontSizes(context).size14,
                           ),
-                          prefixIcon: Icon(
-                            Icons.search,
-                            color: AppColors.primaryColor,
-                            size: screenWidth * 0.05,
-                          ),
-                          suffixIcon: provider.isSearching
-                              ? IconButton(
-                            icon: Icon(
-                              Icons.clear,
-                              color: AppColors.textSecondaryColor,
-                            ),
-                            onPressed: _clearSearch,
-                          )
-                              : null,
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.04,
-                            vertical: screenHeight * 0.015,
-                          ),
-                        ),
-                        style: AppTexts.bodyTextStyle(
-                          context: context,
-                          textColor: AppColors.textPrimaryColor,
-                          fontSize: AppFontSizes(context).size14,
                         ),
                       ),
                     ),
@@ -262,7 +239,7 @@ class _AllPlayersState extends State<AllPlayers> {
                 ),
               ),
 
-              // Players List
+              // Players List with Skeletonizer
               Expanded(
                 child: _buildPlayersList(provider, screenWidth, screenHeight),
               ),
@@ -274,18 +251,31 @@ class _AllPlayersState extends State<AllPlayers> {
   }
 
   Widget _buildPlayersList(
-      AddPlayersProvider provider,
-      double screenWidth,
-      double screenHeight,
-      ) {
+    AllPlayersProvider provider,
+    double screenWidth,
+    double screenHeight,
+  ) {
+    // Show skeleton loading
     if (provider.isLoading) {
-      return Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
+      return Skeletonizer(
+        enabled: true,
+        enableSwitchAnimation: true,
+        effect: ShimmerEffect(
+          baseColor: AppColors.glassColor,
+          highlightColor: AppColors.glassBorderColor.withOpacity(0.6),
+          duration: const Duration(milliseconds: 1200),
+        ),
+        child: ListView.builder(
+          padding: EdgeInsets.all(screenWidth * 0.04),
+          itemCount: 8, // Show 8 skeleton cards
+          itemBuilder: (context, index) {
+            return _buildSkeletonCard(screenWidth, screenHeight);
+          },
         ),
       );
     }
 
+    // Empty state
     if (provider.filteredPlayers.isEmpty) {
       return Center(
         child: Column(
@@ -336,7 +326,9 @@ class _AllPlayersState extends State<AllPlayers> {
                         foregroundColor: AppColors.textPrimaryColor,
                         shadowColor: Colors.transparent,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(screenWidth * 0.02),
+                          borderRadius: BorderRadius.circular(
+                            screenWidth * 0.02,
+                          ),
                         ),
                       ),
                       child: Text(
@@ -357,6 +349,7 @@ class _AllPlayersState extends State<AllPlayers> {
       );
     }
 
+    // Players list with pull-to-refresh
     return RefreshIndicator(
       onRefresh: provider.refresh,
       color: AppColors.primaryColor,
@@ -373,10 +366,10 @@ class _AllPlayersState extends State<AllPlayers> {
   }
 
   Widget _buildPlayerCard(
-      AllPlayersModel player,
-      double screenWidth,
-      double screenHeight,
-      ) {
+    AllPlayersModel player,
+    double screenWidth,
+    double screenHeight,
+  ) {
     return Container(
       margin: EdgeInsets.only(bottom: screenHeight * 0.015),
       child: ClipRRect(
@@ -388,10 +381,7 @@ class _AllPlayersState extends State<AllPlayers> {
             decoration: BoxDecoration(
               color: AppColors.glassColor,
               borderRadius: BorderRadius.circular(screenWidth * 0.03),
-              border: Border.all(
-                color: AppColors.glassBorderColor,
-                width: 1,
-              ),
+              border: Border.all(color: AppColors.glassBorderColor, width: 1),
             ),
             child: Row(
               children: [
@@ -430,47 +420,7 @@ class _AllPlayersState extends State<AllPlayers> {
                         ),
                       ),
                       SizedBox(height: screenHeight * 0.005),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.email,
-                            color: AppColors.textTertiaryColor,
-                            size: screenWidth * 0.035,
-                          ),
-                          SizedBox(width: screenWidth * 0.01),
-                          Expanded(
-                            child: Text(
-                              player.email,
-                              style: AppTexts.bodyTextStyle(
-                                context: context,
-                                textColor: AppColors.textSecondaryColor,
-                                fontSize: AppFontSizes(context).size12,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: screenHeight * 0.003),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.phone,
-                            color: AppColors.textTertiaryColor,
-                            size: screenWidth * 0.035,
-                          ),
-                          SizedBox(width: screenWidth * 0.01),
-                          Text(
-                            player.phone,
-                            style: AppTexts.bodyTextStyle(
-                              context: context,
-                              textColor: AppColors.textSecondaryColor,
-                              fontSize: AppFontSizes(context).size12,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: screenHeight * 0.003),
+
                       Row(
                         children: [
                           Icon(
@@ -495,8 +445,11 @@ class _AllPlayersState extends State<AllPlayers> {
                 ),
 
                 // Message Button with glass effect
-                Consumer<AddPlayersProvider>(
+                Consumer<AllPlayersProvider>(
                   builder: (context, provider, child) {
+                    final isCreatingChatWithThisUser =
+                        provider.creatingChatWithUser == player.id.toString();
+
                     return ClipRRect(
                       borderRadius: BorderRadius.circular(screenWidth * 0.02),
                       child: Container(
@@ -507,16 +460,116 @@ class _AllPlayersState extends State<AllPlayers> {
                               AppColors.primaryLightColor,
                             ],
                           ),
-                          borderRadius: BorderRadius.circular(screenWidth * 0.02),
+                          borderRadius: BorderRadius.circular(
+                            screenWidth * 0.02,
+                          ),
                           border: Border.all(
                             color: AppColors.glassBorderColor,
                             width: 1,
                           ),
                         ),
                         child: ElevatedButton(
-                          onPressed: provider.isCreatingChat
-                              ? null
-                              : () => _onMessageTap(player),
+                          onPressed:
+                              provider.isCreatingChat
+                                  ? null
+                                  : () async {
+                                    final provider =
+                                        context.read<AllPlayersProvider>();
+
+                                    // Check if chat room exists
+                                    final result = await provider
+                                        .checkDirectChatRoom(player.id);
+
+                                    if (result == null) {
+                                      // Error occurred
+                                      _showErrorMessage(
+                                        provider.error ??
+                                            'Failed to check chat room',
+                                      );
+                                      provider.clearError();
+                                      return;
+                                    }
+
+                                    if (result['exists'] == true) {
+                                      // Chat room exists - show snackbar and pop
+                                      AppUtils.showInfoSnackBar(
+                                        context,
+                                        'The chat with this user already exists',
+                                      );
+                                      Navigator.pop(context);
+                                    } else {
+                                      // Room doesn't exist - create new chat screen
+                                      final currentUser =
+                                          await SharedPreferencesService.getUserData();
+
+                                      final participants = [
+                                        Participant(
+                                          id: 0,
+                                          chatRoomId: 0,
+                                          userId: player.id,
+                                          role: 'member',
+                                          joinedAt: DateTime.now(),
+                                          lastReadMessageId: null,
+                                          lastReadAt: null,
+                                          isMuted: false,
+                                          isActive: true,
+                                          createdAt: DateTime.now(),
+                                          updatedAt: DateTime.now(),
+                                          user: User(
+                                            id: player.id,
+                                            name: player.name,
+                                            email: player.email,
+                                          ),
+                                        ),
+                                        Participant(
+                                          id: 1,
+                                          chatRoomId: 0,
+                                          userId: currentUser!.id,
+                                          role: 'member',
+                                          joinedAt: DateTime.now(),
+                                          lastReadMessageId: null,
+                                          lastReadAt: null,
+                                          isMuted: false,
+                                          isActive: true,
+                                          createdAt: DateTime.now(),
+                                          updatedAt: DateTime.now(),
+                                          user: User(
+                                            id: currentUser.id,
+                                            name: currentUser.name,
+                                            email: currentUser.email,
+                                          ),
+                                        ),
+                                      ];
+
+                                      Navigator.pushReplacement(
+                                        context,
+                                        CupertinoPageRoute(
+                                          builder:
+                                              (_) => ChatScreen(
+                                                chatRoom: ChatRoom(
+                                                  id: 0,
+                                                  name: "Direct Message",
+                                                  type: "direct",
+                                                  createdBy: currentUser.id,
+                                                  isActive: true,
+                                                  lastActivity: DateTime.now(),
+                                                  participantCount: 2,
+                                                  createdAt: DateTime.now(),
+                                                  updatedAt: DateTime.now(),
+                                                  participants: participants,
+                                                  creator: User(
+                                                    id: currentUser.id,
+                                                    name: currentUser.name,
+                                                    email: currentUser.email,
+                                                  ),
+                                                ),
+                                                name: player.name,
+                                                id: player.id,
+                                              ),
+                                        ),
+                                      );
+                                    }
+                                  },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             foregroundColor: AppColors.textPrimaryColor,
@@ -526,28 +579,43 @@ class _AllPlayersState extends State<AllPlayers> {
                               vertical: screenHeight * 0.01,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(screenWidth * 0.02),
+                              borderRadius: BorderRadius.circular(
+                                screenWidth * 0.02,
+                              ),
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-
-                                Icon(
-                                  CupertinoIcons.bubble_left_fill,
-                                  size: screenWidth * 0.04,
-                                ),
-                              SizedBox(width: screenWidth * 0.01),
-                              Text( 'Message',
-                                style: AppTexts.bodyTextStyle(
-                                  context: context,
-                                  textColor: AppColors.textPrimaryColor,
-                                  fontSize: AppFontSizes(context).size12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
+                          child:
+                              isCreatingChatWithThisUser
+                                  ? SizedBox(
+                                    width: screenWidth * 0.04,
+                                    height: screenWidth * 0.04,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        AppColors.textPrimaryColor,
+                                      ),
+                                    ),
+                                  )
+                                  : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        CupertinoIcons.bubble_left_fill,
+                                        size: screenWidth * 0.04,
+                                      ),
+                                      SizedBox(width: screenWidth * 0.01),
+                                      Text(
+                                        'Message',
+                                        style: AppTexts.bodyTextStyle(
+                                          context: context,
+                                          textColor: AppColors.textPrimaryColor,
+                                          fontSize:
+                                              AppFontSizes(context).size12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                         ),
                       ),
                     );

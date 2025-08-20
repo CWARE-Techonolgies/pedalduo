@@ -19,10 +19,7 @@ class HighlightsScreen extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                AppColors.navyBlueGrey,
-                AppColors.lightNavyBlueGrey,
-              ],
+              colors: [AppColors.navyBlueGrey, AppColors.lightNavyBlueGrey],
             ),
           ),
           child: SafeArea(
@@ -41,19 +38,6 @@ class HighlightsScreen extends StatelessWidget {
                           context: context,
                           textColor: AppColors.whiteColor,
                           fontSize: AppFontSizes(context).size32,
-                        ),
-                      ),
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: AppColors.orangeColor,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Icon(
-                          Icons.add,
-                          color: AppColors.whiteColor,
-                          size: 24,
                         ),
                       ),
                     ],
@@ -86,25 +70,71 @@ class HighlightsScreen extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
+                // Placeholder message when using sample data
+
                 // Highlights Grid
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                    child: GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 16,
-                        crossAxisSpacing: 16,
-                        childAspectRatio: 0.8,
+                !highlightsProvider.hasRealData
+                    ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(height: MediaQuery.sizeOf(context).height / 4),
+                        Container(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 10,
+                          ),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.orangeColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: AppColors.orangeColor.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.info_outline,
+                                color: AppColors.orangeColor,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  highlightsProvider.placeholderMessage,
+                                  style: AppTexts.bodyTextStyle(
+                                    context: context,
+                                    textColor: AppColors.orangeColor,
+                                    fontSize: AppFontSizes(context).size14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                    : Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: GridView.builder(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                mainAxisSpacing: 16,
+                                crossAxisSpacing: 16,
+                                childAspectRatio: 0.8,
+                              ),
+                          itemCount: highlightsProvider.highlights.length,
+                          itemBuilder: (context, index) {
+                            final highlight =
+                                highlightsProvider.highlights[index];
+                            return _buildHighlightCard(context, highlight);
+                          },
+                        ),
                       ),
-                      itemCount: highlightsProvider.highlights.length,
-                      itemBuilder: (context, index) {
-                        final highlight = highlightsProvider.highlights[index];
-                        return _buildHighlightCard(context, highlight);
-                      },
                     ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -114,12 +144,12 @@ class HighlightsScreen extends StatelessWidget {
   }
 
   Widget _buildTabButton(
-      BuildContext context,
-      String title,
-      int index,
-      bool isSelected,
-      HighlightsProvider provider,
-      ) {
+    BuildContext context,
+    String title,
+    int index,
+    bool isSelected,
+    HighlightsProvider provider,
+  ) {
     return GestureDetector(
       onTap: () => provider.setSelectedTab(index),
       child: Container(
@@ -304,11 +334,7 @@ class HighlightsScreen extends StatelessWidget {
                 const Positioned(
                   bottom: 16,
                   right: 16,
-                  child: Icon(
-                    Icons.flag,
-                    color: AppColors.greyColor,
-                    size: 16,
-                  ),
+                  child: Icon(Icons.flag, color: AppColors.greyColor, size: 16),
                 ),
               ],
             ),

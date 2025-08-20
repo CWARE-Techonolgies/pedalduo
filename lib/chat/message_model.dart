@@ -45,30 +45,30 @@ class Message {
       senderId: json['sender_id'] as int,
       content: (json['content'] as String?) ?? '', // Handle null content
       messageType:
-          (json['message_type'] as String?) ??
+      (json['message_type'] as String?) ??
           'text', // Handle null message_type
       attachmentUrl: json['attachment_url'] as String?,
       replyToMessageId: json['reply_to_message_id'] as int?,
       isEdited: (json['is_edited'] as bool?) ?? false,
       editedAt:
-          json['edited_at'] != null
-              ? DateTime.parse(json['edited_at'] as String)
-              : null,
+      json['edited_at'] != null
+          ? DateTime.parse(json['edited_at'] as String)
+          : null,
       isDeleted: (json['is_deleted'] as bool?) ?? false,
       deletedAt:
-          json['deleted_at'] != null
-              ? DateTime.parse(json['deleted_at'] as String)
-              : null,
+      json['deleted_at'] != null
+          ? DateTime.parse(json['deleted_at'] as String)
+          : null,
       readBy: List<int>.from(json['read_by'] ?? []), // Handle null read_by
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       sender: User.fromJson(json['sender'] as Map<String, dynamic>),
       repliedMessage:
-          json['replied_message'] != null
-              ? Message.fromJson(
-                json['replied_message'] as Map<String, dynamic>,
-              )
-              : null,
+      json['replied_message'] != null
+          ? Message.fromJson(
+        json['replied_message'] as Map<String, dynamic>,
+      )
+          : null,
     );
   }
 
@@ -92,6 +92,94 @@ class Message {
       'sender': sender.toJson(),
       'replied_message': repliedMessage?.toJson(),
     };
+  }
+
+  // copyWith method for creating modified copies
+  Message copyWith({
+    int? id,
+    int? chatRoomId,
+    int? senderId,
+    String? content,
+    String? messageType,
+    String? attachmentUrl,
+    int? replyToMessageId,
+    bool? isEdited,
+    DateTime? editedAt,
+    bool? isDeleted,
+    DateTime? deletedAt,
+    List<int>? readBy,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    User? sender,
+    Message? repliedMessage,
+  }) {
+    return Message(
+      id: id ?? this.id,
+      chatRoomId: chatRoomId ?? this.chatRoomId,
+      senderId: senderId ?? this.senderId,
+      content: content ?? this.content,
+      messageType: messageType ?? this.messageType,
+      attachmentUrl: attachmentUrl ?? this.attachmentUrl,
+      replyToMessageId: replyToMessageId ?? this.replyToMessageId,
+      isEdited: isEdited ?? this.isEdited,
+      editedAt: editedAt ?? this.editedAt,
+      isDeleted: isDeleted ?? this.isDeleted,
+      deletedAt: deletedAt ?? this.deletedAt,
+      readBy: readBy ?? this.readBy,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      sender: sender ?? this.sender,
+      repliedMessage: repliedMessage ?? this.repliedMessage,
+    );
+  }
+
+  // Equality operator for comparing messages
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is Message &&
+        other.id == id &&
+        other.chatRoomId == chatRoomId &&
+        other.senderId == senderId &&
+        other.content == content &&
+        other.messageType == messageType &&
+        other.attachmentUrl == attachmentUrl &&
+        other.replyToMessageId == replyToMessageId &&
+        other.isEdited == isEdited &&
+        other.editedAt == editedAt &&
+        other.isDeleted == isDeleted &&
+        other.deletedAt == deletedAt &&
+        other.readBy.toString() == readBy.toString() &&
+        other.createdAt == createdAt &&
+        other.updatedAt == updatedAt &&
+        other.sender == sender;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      id,
+      chatRoomId,
+      senderId,
+      content,
+      messageType,
+      attachmentUrl,
+      replyToMessageId,
+      isEdited,
+      editedAt,
+      isDeleted,
+      deletedAt,
+      readBy,
+      createdAt,
+      updatedAt,
+      sender,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'Message(id: $id, content: $content, senderId: $senderId, isEdited: $isEdited, readBy: $readBy)';
   }
 
   bool get isText => messageType == 'text';
@@ -130,5 +218,41 @@ class ChatPagination {
       'totalMessages': totalMessages,
       'hasMore': hasMore,
     };
+  }
+
+  // copyWith method for ChatPagination
+  ChatPagination copyWith({
+    int? currentPage,
+    int? totalPages,
+    int? totalMessages,
+    bool? hasMore,
+  }) {
+    return ChatPagination(
+      currentPage: currentPage ?? this.currentPage,
+      totalPages: totalPages ?? this.totalPages,
+      totalMessages: totalMessages ?? this.totalMessages,
+      hasMore: hasMore ?? this.hasMore,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is ChatPagination &&
+        other.currentPage == currentPage &&
+        other.totalPages == totalPages &&
+        other.totalMessages == totalMessages &&
+        other.hasMore == hasMore;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(currentPage, totalPages, totalMessages, hasMore);
+  }
+
+  @override
+  String toString() {
+    return 'ChatPagination(currentPage: $currentPage, totalPages: $totalPages, totalMessages: $totalMessages, hasMore: $hasMore)';
   }
 }

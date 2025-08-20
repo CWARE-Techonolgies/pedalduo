@@ -3,14 +3,17 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:pedalduo/providers/navigation_provider.dart';
 import 'package:pedalduo/services/shared_preference_service.dart';
 import 'package:pedalduo/style/fonts_sizes.dart';
 import 'package:pedalduo/views/all_players.dart';
+import 'package:pedalduo/views/play/brackets/all_brackets_views.dart';
 import 'package:pedalduo/views/play/views/play_screen.dart';
 import 'package:provider/provider.dart';
 import '../../../../../style/colors.dart';
 import '../../../../../widgets/hero_slider.dart';
 import '../../../../invitation/invitation_screen.dart';
+import '../../../../invitation/invitation_provider.dart'; // Add this import
 import '../../../../play/models/my_matches_model.dart';
 import '../../../../play/providers/matches_provider.dart';
 
@@ -23,10 +26,27 @@ class DiscoveryScreen extends StatefulWidget {
 
 class _DiscoveryScreenState extends State<DiscoveryScreen> {
   final PageController _pageController = PageController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Call the invitation API every time this screen is visited
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<InvitationsProvider>().initialize();
+      _refreshInvitations();
+    });
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  // Method to refresh invitations
+  void _refreshInvitations() {
+    final invitationsProvider = context.read<InvitationsProvider>();
+    invitationsProvider.refreshAll();
   }
 
   @override
@@ -47,6 +67,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
 
           // Upcoming Matches
           _buildUpcomingMatches(context),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -73,15 +94,23 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                 ),
               ),
               const SizedBox(width: 16),
+              // Updated Invitations card with Consumer to listen to invitation count
               Expanded(
-                child: _buildGlassCard(
-                  title: 'Invitations',
-                  icon: Icons.inbox_outlined,
-                  color: AppColors.greenColor,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      CupertinoPageRoute(builder: (_) => InvitationsScreen()),
+                child: Consumer<InvitationsProvider>(
+                  builder: (context, invitationsProvider, child) {
+                    final totalInvitations = invitationsProvider.pendingReceivedCount;
+
+                    return _buildGlassCardWithBadge(
+                      title: 'Invitations',
+                      icon: Icons.inbox_outlined,
+                      color: AppColors.greenColor,
+                      badgeCount: totalInvitations,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          CupertinoPageRoute(builder: (_) => InvitationsScreen()),
+                        );
+                      },
                     );
                   },
                 ),
@@ -91,13 +120,19 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(
-                child: _buildGlassCard(
-                  title: 'Top Feed',
-                  icon: Icons.local_fire_department,
-                  color: AppColors.blueColor,
-                  onTap: () {},
-                ),
+              Consumer<NavigationProvider>(
+                builder: (BuildContext context, NavigationProvider navProvider, Widget? child) {
+                  return Expanded(
+                    child: _buildGlassCard(
+                      title: 'Top Feed',
+                      icon: Icons.local_fire_department,
+                      color: AppColors.blueColor,
+                      onTap: () {
+                        navProvider.goToTab(context, 0);
+                      },
+                    ),
+                  );
+                },
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -185,6 +220,95 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
     );
   }
 
+  // New method for glass card with badge (for invitations)
+  Widget _buildGlassCardWithBadge({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required int badgeCount,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 80,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [color.withOpacity(0.8), color.withOpacity(0.6)],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.7),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    color: AppColors.whiteColor,
+                    size: AppFontSizes(context).size20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    title,
+                    style: GoogleFonts.barlowCondensed(
+                      fontSize: AppFontSizes(context).size16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.whiteColor,
+                    ),
+                  ),
+                  if (badgeCount > 0)...[
+                    SizedBox(width: 10,),
+                    Container(
+                      decoration: BoxDecoration(
+                          color: AppColors.backgroundColor,
+                        shape: BoxShape.circle,
+
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          badgeCount > 99 ? '99+' : badgeCount.toString(),
+                          style: GoogleFonts.barlow(
+                            fontSize: AppFontSizes(context).size10,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.whiteColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ]
+
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildUpcomingMatches(BuildContext context) {
     return Consumer<MatchesProvider>(
       builder: (context, provider, child) {
@@ -207,7 +331,6 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                       color: AppColors.whiteColor,
                     ),
                   ),
-
                 ],
               ),
             ),
@@ -280,7 +403,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'There are no scheduled matches at the moment.',
+                  'There are no scheduled matches at the moment. Join or create any tournament',
                   style: GoogleFonts.barlow(
                     fontSize: AppFontSizes(context).size14,
                     color: AppColors.greyColor,
@@ -296,29 +419,31 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
   }
 
   Widget _buildUpcomingMatchesList(
-    BuildContext context,
-    List<MyMatchesModel> matches,
-  ) {
+      BuildContext context,
+      List<MyMatchesModel> matches,
+      ) {
+    if (matches.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return SizedBox(
-      height: 280, // Adjusted height
-      child: ListView.builder(
+      height: MediaQuery.sizeOf(context).height *.23,
+      child: matches.length == 1
+          ? Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: _buildUpcomingMatchCard(context, matches.first),
+      )
+          : ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: matches.length,
         itemBuilder: (context, index) {
           final match = matches[index];
-          return Container(
-            width: MediaQuery.of(context).size.width * 0.85,
-            margin: EdgeInsets.only(
-              right: index == matches.length - 1 ? 0 : 16,
-            ),
-            child: _buildUpcomingMatchCard(context, match),
-          );
+          return _buildUpcomingMatchCard(context, match);
         },
       ),
     );
   }
-
   Widget _buildUpcomingMatchCard(BuildContext context, MyMatchesModel match) {
     return Container(
       decoration: BoxDecoration(
@@ -502,53 +627,6 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                   ],
                 ),
 
-                const SizedBox(height: 16),
-
-                // Bottom Actions
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.blueColor.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: AppColors.blueColor,
-                          width: 1,
-                        ),
-                      ),
-                      child: Text(
-                        _getMatchStatus(match),
-                        style: GoogleFonts.barlow(
-                          fontSize: AppFontSizes(context).size12,
-                          color: AppColors.blueColor,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    OutlinedButton(
-                      onPressed: () {
-                        // Navigate to match details
-                      },
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: AppColors.orangeColor),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: Text(
-                        'View Details',
-                        style: GoogleFonts.barlow(
-                          fontSize: AppFontSizes(context).size14,
-                          color: AppColors.orangeColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),

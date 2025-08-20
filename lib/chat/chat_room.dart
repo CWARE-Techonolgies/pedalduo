@@ -69,8 +69,12 @@ class ChatRoom {
           .toList()
           : [],
       creator: User.fromJson(json['creator'] as Map<String, dynamic>),
-      user1: json['user1'] != null ? User.fromJson(json['user1'] as Map<String, dynamic>) : null,
-      user2: json['user2'] != null ? User.fromJson(json['user2'] as Map<String, dynamic>) : null,
+      user1: json['user1'] != null
+          ? User.fromJson(json['user1'] as Map<String, dynamic>)
+          : null,
+      user2: json['user2'] != null
+          ? User.fromJson(json['user2'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -103,12 +107,92 @@ class ChatRoom {
   bool get isTeamChat => type == 'team';
   bool get isTournamentChat => type == 'tournament';
 
+  // Method to get display name based on current user
+  String getDisplayName(int currentUserId) {
+    if (!isDirectMessage) {
+      return name; // For team and tournament chats, use the original name
+    }
+
+    // For direct messages, show the OTHER user (not the current user)
+    if (user1 != null && user2 != null) {
+      // Check which user is NOT the current user and show that one
+      if (user1!.id != currentUserId) {
+        return user1!.name.isNotEmpty ? user1!.name : 'Unknown User';
+      } else if (user2!.id != currentUserId) {
+        return user2!.name.isNotEmpty ? user2!.name : 'Unknown User';
+      }
+    }
+
+    // Additional fallback logic
+    // If user1 or user2 is null, check with creator
+    if (user1 != null && user1!.id != currentUserId) {
+      return user1!.name.isNotEmpty ? user1!.name : 'Unknown User';
+    } else if (user2 != null && user2!.id != currentUserId) {
+      return user2!.name.isNotEmpty ? user2!.name : 'Unknown User';
+    } else if (creator.id != currentUserId) {
+      return creator.name.isNotEmpty ? creator.name : 'Unknown User';
+    }
+
+    return name.isNotEmpty ? name : 'Direct Message';
+  }
+
+  // Method to get the other user object
+  User? getOtherUser(int currentUserId) {
+    if (!isDirectMessage) return null;
+
+    // Return the user that is NOT the current user
+    if (user1 != null && user2 != null) {
+      if (user1!.id != currentUserId) {
+        return user1;
+      } else if (user2!.id != currentUserId) {
+        return user2;
+      }
+    }
+
+    // Additional fallback logic
+    if (user1 != null && user1!.id != currentUserId) {
+      return user1;
+    } else if (user2 != null && user2!.id != currentUserId) {
+      return user2;
+    } else if (creator.id != currentUserId) {
+      return creator;
+    }
+
+    return null;
+  }
+
+  // Keep the original displayName for backward compatibility
+  // But this should be replaced with getDisplayName(currentUserId)
   String get displayName {
     if (isDirectMessage && user1 != null && user2 != null) {
-      // Return the name of the other user (not the current user)
-      return user2!.name; // You might want to adjust this based on current user
+      return user1!.name.isNotEmpty ? user1!.name : name;
     }
     return name;
+  }
+
+  // Update initials to work with current user context
+  String getInitials(int currentUserId) {
+    String displayName = getDisplayName(currentUserId);
+    if (displayName.trim().isEmpty) return '';
+
+    List<String> nameParts = displayName.trim().split(' ');
+    if (nameParts.length >= 2 &&
+        nameParts[0].isNotEmpty &&
+        nameParts[1].isNotEmpty) {
+      return '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
+    }
+    return displayName[0].toUpperCase();
+  }
+
+  String get initials {
+    if (displayName.trim().isEmpty) return '';
+    List<String> nameParts = displayName.trim().split(' ');
+    if (nameParts.length >= 2 &&
+        nameParts[0].isNotEmpty &&
+        nameParts[1].isNotEmpty) {
+      return '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
+    }
+    return displayName[0].toUpperCase();
   }
 
   String get subtitle {
@@ -219,13 +303,17 @@ class User {
   }
 
   String get initials {
-    List<String> nameParts = name.split(' ');
-    if (nameParts.length >= 2) {
+    if (name.trim().isEmpty) return '';
+    List<String> nameParts = name.trim().split(' ');
+    if (nameParts.length >= 2 &&
+        nameParts[0].isNotEmpty &&
+        nameParts[1].isNotEmpty) {
       return '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
     }
-    return name.isNotEmpty ? name[0].toUpperCase() : '';
+    return name[0].toUpperCase();
   }
 }
+
 class LastMessage {
   final int id;
   final String content;

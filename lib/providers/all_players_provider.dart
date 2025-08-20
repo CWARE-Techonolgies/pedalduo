@@ -4,8 +4,9 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/all_players_models.dart';
 import '../global/apis.dart';
+import '../services/shared_preference_service.dart';
 
-class AddPlayersProvider extends ChangeNotifier {
+class AllPlayersProvider extends ChangeNotifier {
   List<AllPlayersModel> _players = [];
   List<AllPlayersModel> _filteredPlayers = [];
   bool _isLoading = true;
@@ -34,10 +35,17 @@ class AddPlayersProvider extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        _players =
-            (data['data'] as List)
-                .map((player) => AllPlayersModel.fromJson(player))
-                .toList();
+        final allPlayers = (data['data'] as List)
+            .map((player) => AllPlayersModel.fromJson(player))
+            .toList();
+
+        // Get current user data to filter out from the list
+        final currentUser = await SharedPreferencesService.getUserData();
+
+        // Filter out current user from the players list
+        _players = allPlayers.where((player) =>
+        currentUser == null || player.id != currentUser.id).toList();
+
         _filteredPlayers = _players;
         _isLoading = false;
         _error = null;
@@ -58,15 +66,14 @@ class AddPlayersProvider extends ChangeNotifier {
     if (query.isEmpty) {
       _filteredPlayers = _players;
     } else {
-      _filteredPlayers =
-          _players
-              .where(
-                (player) =>
-            player.name.toLowerCase().contains(query.toLowerCase()) ||
-                player.email.toLowerCase().contains(query.toLowerCase()) ||
-                player.phone.contains(query),
-          )
-              .toList();
+      _filteredPlayers = _players
+          .where(
+            (player) =>
+        player.name.toLowerCase().contains(query.toLowerCase()) ||
+            player.email.toLowerCase().contains(query.toLowerCase()) ||
+            player.phone.contains(query),
+      )
+          .toList();
     }
     notifyListeners();
   }
@@ -78,68 +85,65 @@ class AddPlayersProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Create chat with user
-// Update your createChatWithUser method in AddPlayersProvider:
-
-  Future<bool> createChatWithUser(int otherUserId, String userName) async {
-    try {
-      _isCreatingChat = true;
-      _creatingChatWithUser = userName;
-      _error = null;
-      notifyListeners();
-
-      // Get auth token from shared preferences
-      final prefs = await SharedPreferences.getInstance();
-      final authToken = prefs.getString('auth_token');
-
-      if (authToken == null) {
-        throw Exception('Authentication token not found');
-      }
-
-      // Prepare request body
-      final requestBody = json.encode({'otherUserId': otherUserId});
-
-      // Make API call
-      final response = await http.post(
-        Uri.parse(AppApis.directChatWithUser),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $authToken',
-        },
-        body: requestBody,
-      );
-
-      if (response.statusCode == 201) {
-        final data = json.decode(response.body);
-
-        if (data['success'] == true) {
-          _isCreatingChat = false;
-          _creatingChatWithUser = null;
-          notifyListeners();
-          return true; // Success
-        } else {
-          print('Failed to create chat: ${data['message'] ?? 'Unknown error'}');
-          throw Exception(
-            'Failed to create chat: ${data['message'] ?? 'Unknown error'}',
-          );
-        }
-      } else {
-        print('Failed to create chat: ${response.statusCode}');
-        throw Exception('Failed to create chat: ${response.statusCode}');
-      }
-    } catch (e) {
-      _isCreatingChat = false;
-      _creatingChatWithUser = null;
-      _error = 'Error creating chat: ${e.toString()}';
-      print('Error creating chat: ${e.toString()}');
-      notifyListeners();
-      return false; // Failure
-    }
-  }
   // Clear error
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  Future<Map<String, dynamic>?> checkDirectChatRoom(int userId) async {
+    try {
+      _isCreatingChat = true;
+      _creatingChatWithUser = userId.toString();
+      _error = null;
+      notifyListeners();
+
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+
+      if (token == null) {
+        throw Exception('Authentication token not found');
+      }
+
+      final response = await http.get(
+        Uri.parse('${AppApis.chatBaseUrl}api/chat/rooms/direct/exist/$userId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      _isCreatingChat = false;
+      _creatingChatWithUser = null;
+
+      print('✅ Status: ${response.statusCode}');
+      print('✅ Response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+
+        // Return the entire data object
+        if (decoded['success'] == true) {
+          notifyListeners();
+          return decoded['data']; // This contains 'exists' and 'room'
+        } else {
+          print('ℹ️ No chat room found for user $userId');
+          notifyListeners();
+          return null;
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('Unauthorized: Invalid or expired token');
+      } else {
+        throw Exception('Failed to check chat room');
+      }
+    } catch (e) {
+      _isCreatingChat = false;
+      _creatingChatWithUser = null;
+      _error = 'Error checking chat room: ${e.toString()}';
+      print(_error);
+      notifyListeners();
+      return null;
+    }
   }
 
   // Refresh players list

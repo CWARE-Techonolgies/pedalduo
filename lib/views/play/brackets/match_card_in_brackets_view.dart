@@ -1,9 +1,13 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pedalduo/views/play/brackets/tennis_scoreing.dart';
 import 'package:pedalduo/views/play/models/tournament_data.dart';
+import 'package:provider/provider.dart';
 import '../../../style/colors.dart';
 import '../../../style/fonts_sizes.dart';
 import '../../../style/texts.dart';
+import '../providers/brackets_provider.dart';
 
 class MatchCardInBracketsView extends StatelessWidget {
   final MyMatch match;
@@ -82,7 +86,16 @@ class MatchCardInBracketsView extends StatelessWidget {
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [_buildMatchNumberChip(context), _buildStatusChip(context)],
+        children: [
+          _buildMatchNumberChip(context),
+          Column(
+            children: [
+              _buildStatusChip(context),
+              SizedBox(height: 10),
+              _buildShareChip(context),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -102,6 +115,34 @@ class MatchCardInBracketsView extends StatelessWidget {
           textColor: AppColors.textPrimaryColor,
           fontSize: AppFontSizes(context).size14,
           fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShareChip(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        Provider.of<Brackets>(
+          context,
+          listen: false,
+        ).shareMatchScore(match.id, match.tournamentId.toString(), context);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.goldColor,
+          borderRadius: BorderRadius.circular(45),
+          border: Border.all(color: AppColors.glassBorderColor),
+        ),
+        child: Text(
+          'Share Score',
+          style: AppTexts.bodyTextStyle(
+            context: context,
+            textColor: AppColors.textPrimaryColor,
+            fontSize: AppFontSizes(context).size14,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );
@@ -614,7 +655,7 @@ class MatchCardInBracketsView extends StatelessWidget {
               ],
             ),
           ),
-          if (isCompleted)
+          if (isCompleted) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -633,6 +674,64 @@ class MatchCardInBracketsView extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(width: 8),
+            InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  CupertinoPageRoute(
+                    builder:
+                        (_) => TennisScoringScreen(
+                          matchId: match.id,
+                          tournamentId: match.tournamentId,
+                        ),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.accentBlueColor.withOpacity(0.8),
+                      AppColors.accentPurpleColor.withOpacity(0.8),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.accentBlueColor.withOpacity(0.3),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.visibility,
+                      color: AppColors.textPrimaryColor,
+                      size: 12,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'VIEW SCORE',
+                      style: AppTexts.bodyTextStyle(
+                        context: context,
+                        textColor: AppColors.textPrimaryColor,
+                        fontSize: AppFontSizes(context).size10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

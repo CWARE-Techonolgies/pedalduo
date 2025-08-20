@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "944310443178",
+    "project_id": "padelduo-notifications",
+    "storage_bucket": "padelduo-notifications.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:944310443178:android:bfaa84cd01a66ff87884d3",
+        "android_client_info": {
+          "package_name": "com.app.padelduo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTFlu4JPBpoiBvpVshEZJqIi7qjWkCgvw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

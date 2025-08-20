@@ -5,7 +5,6 @@ import 'package:pedalduo/views/auth/signup_screen.dart';
 import 'package:pedalduo/views/home_screen/views/home_screen.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
-
 import '../../global/images.dart';
 import '../../providers/auth_provider.dart';
 import '../../style/colors.dart';
@@ -178,7 +177,7 @@ class _LoginScreenState extends State<LoginScreen>
                                       ),
                                       child: Center(
                                         child: Image.asset(
-                                          AppImages.logoImage,
+                                          AppImages.logoImage2,
                                           width: width * 0.15,
                                           height: width * 0.15,
                                           fit: BoxFit.contain,
@@ -225,11 +224,14 @@ class _LoginScreenState extends State<LoginScreen>
                                       _buildGlassTextField(
                                         controller:
                                             authProvider.emailController,
-                                        hint: 'Email Address',
-                                        icon: Icons.email_outlined,
+                                        hint:
+                                            'Enter your email or phone number',
+                                        icon: Icons.security,
                                         keyboardType:
                                             TextInputType.emailAddress,
-                                        onChanged: authProvider.validateEmail,
+                                        onChanged:
+                                            authProvider
+                                                .validateEmailOrPhoneForLogin,
                                         isValid: authProvider.isEmailValid,
                                         errorText: authProvider.emailError,
                                         width: width,
@@ -301,8 +303,9 @@ class _LoginScreenState extends State<LoginScreen>
                                                 ? null
                                                 : () async {
                                                   bool success =
-                                                      await authProvider
-                                                          .login(context);
+                                                      await authProvider.login(
+                                                        context,
+                                                      );
                                                   if (success) {
                                                     // Navigate to home screen
                                                     ScaffoldMessenger.of(
@@ -314,8 +317,13 @@ class _LoginScreenState extends State<LoginScreen>
                                                         ),
                                                       ),
                                                     );
-                                                    Navigator.pushReplacement(context, CupertinoPageRoute(builder: (_)
-                                                    => HomeScreen()));
+                                                    Navigator.pushReplacement(
+                                                      context,
+                                                      CupertinoPageRoute(
+                                                        builder:
+                                                            (_) => HomeScreen(),
+                                                      ),
+                                                    );
                                                   }
                                                 },
                                         isLoading: authProvider.isLoading,

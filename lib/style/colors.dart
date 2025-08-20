@@ -57,6 +57,7 @@ class AppColors {
   static const Color followColor = Color(0xFF22c55e);
   static const Color greenColor = Color(0xFF10b981);
   static const Color lightGreenColor = Color(0xFF22c55e);
+  static const Color pinkColor = Color(0xFFec4899);
 
   // Gradient Colors
   static const List<Color> primaryGradient = [

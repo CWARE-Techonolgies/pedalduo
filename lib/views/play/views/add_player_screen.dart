@@ -1,14 +1,15 @@
-// Add Players Screen - Dark Glassmorphism Theme
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-import '../../../global/apis.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:provider/provider.dart';
+import 'package:skeletonizer/skeletonizer.dart';
+import '../../../models/all_players_models.dart';
+import '../../../providers/team_add_players_provider.dart';
 import '../../../style/colors.dart';
 import '../../../style/fonts_sizes.dart';
 import '../../../style/texts.dart';
-import '../models/add_players_model.dart';
+import '../../../utils/beautiful_snackbar.dart';
+import '../providers/team_provider.dart';
 
 class AddPlayersScreen extends StatefulWidget {
   final String teamId;
@@ -25,99 +26,159 @@ class AddPlayersScreen extends StatefulWidget {
 }
 
 class _AddPlayersScreenState extends State<AddPlayersScreen> {
-  List<AllPlayersModel> _players = [];
-  List<AllPlayersModel> _filteredPlayers = [];
   final TextEditingController _searchController = TextEditingController();
-  bool _isLoading = true;
-  bool _isSearching = false;
 
   @override
   void initState() {
     super.initState();
-    _loadPlayers();
-    _searchController.addListener(_filterPlayers);
+    // Load players when screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TeamAddPlayersProvider>().loadPlayers();
+    });
+    _searchController.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadPlayers() async {
-    try {
-      final response = await http.get(Uri.parse(AppApis.allUsers));
+  void _onSearchChanged() {
+    context.read<TeamAddPlayersProvider>().filterPlayers(_searchController.text);
+  }
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        setState(() {
-          _players =
-              (data['data'] as List)
-                  .map((player) => AllPlayersModel.fromJson(player))
-                  .toList();
-          _filteredPlayers = _players;
-          _isLoading = false;
-        });
+  void _clearSearch() {
+    _searchController.clear();
+    context.read<TeamAddPlayersProvider>().clearSearch();
+  }
+
+  Future<void> _handleAddPlayer(int playerId) async {
+    final provider = context.read<TeamAddPlayersProvider>();
+
+    final success = await provider.addPlayerToTeam(
+        playerId,
+        widget.teamId,
+        widget.baseUrl
+    );
+
+    if (mounted) {
+      if (success) {
+        _showSuccessMessage('Player invited successfully!');
       } else {
-        throw Exception('Failed to load players');
+        _showErrorMessage(provider.error ?? 'Failed to invite player');
+        provider.clearError();
       }
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      _showErrorMessage('Error loading players: ${e.toString()}');
     }
   }
 
-  void _filterPlayers() {
-    setState(() {
-      _isSearching = _searchController.text.isNotEmpty;
-      if (_searchController.text.isEmpty) {
-        _filteredPlayers = _players;
-      } else {
-        _filteredPlayers =
-            _players
-                .where(
-                  (player) =>
-              player.name.toLowerCase().contains(
-                _searchController.text.toLowerCase(),
-              ) ||
-                  player.email.toLowerCase().contains(
-                    _searchController.text.toLowerCase(),
-                  ) ||
-                  player.phone.contains(_searchController.text),
-            )
-                .toList();
-      }
-    });
-  }
-
-  Future<void> _addPlayer(int playerId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
-
-      if (token == null) {
-        throw Exception('Authentication token not found');
-      }
-
-      final response = await http.post(
-        Uri.parse('${widget.baseUrl}teams/${widget.teamId}/players'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: json.encode({'playerId': playerId}),
+  Future<void> _handleCopyInviteLink(
+      BuildContext context,
+      TeamProvider teamProvider,
+      ) async {
+    // Show loading with beautiful top snackbar
+    if (context.mounted) {
+      BeautifulSnackBar.showTopSnackBar(
+        context: context,
+        message: 'Generating Invite Link...',
+        subtitle: 'Please wait while we prepare your invite link',
+        icon: Icons.hourglass_empty,
+        backgroundColor: AppColors.orangeColor,
+        iconColor: Colors.white,
+        duration: const Duration(seconds: 2),
       );
-
-      if (response.statusCode == 200) {
-        _showSuccessMessage('Player added successfully!');
-      } else {
-        _showErrorMessage('Failed to add player. Please try again.');
-      }
-    } catch (e) {
-      _showErrorMessage('Error adding player: ${e.toString()}');
     }
+
+    // Call the provider method to handle copy and share
+    final success = await teamProvider.handleCopyInviteLink(widget.teamId);
+
+    if (context.mounted) {
+      if (success) {
+        // Show beautiful success snackbar from top
+        BeautifulSnackBar.showInviteLinkSuccess(context);
+      } else {
+        // Show beautiful error snackbar from top
+        BeautifulSnackBar.showError(
+          context,
+          teamProvider.error ?? 'Unable to generate invite link',
+        );
+      }
+    }
+  }
+
+  // Create skeleton containers for loading
+  Widget _buildSkeletonCard(double screenWidth, double screenHeight) {
+    return Container(
+      margin: EdgeInsets.only(bottom: screenHeight * 0.015),
+      child: Container(
+        padding: EdgeInsets.all(screenWidth * 0.04),
+        decoration: BoxDecoration(
+          color: AppColors.glassColor,
+          borderRadius: BorderRadius.circular(screenWidth * 0.04),
+          border: Border.all(color: AppColors.glassBorderColor, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Avatar skeleton
+            Container(
+              width: screenWidth * 0.12,
+              height: screenWidth * 0.12,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.glassBorderColor.withOpacity(0.3),
+              ),
+            ),
+            SizedBox(width: screenWidth * 0.03),
+
+            // Info skeleton
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Name skeleton
+                  Container(
+                    width: screenWidth * 0.4,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: AppColors.glassBorderColor.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.01),
+                  // Tournament skeleton
+                  Container(
+                    width: screenWidth * 0.35,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: AppColors.glassBorderColor.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Button skeleton
+            Container(
+              width: screenWidth * 0.18,
+              height: screenHeight * 0.04,
+              decoration: BoxDecoration(
+                color: AppColors.glassBorderColor.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(screenWidth * 0.03),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -128,8 +189,11 @@ class _AddPlayersScreenState extends State<AddPlayersScreen> {
     return Scaffold(
       backgroundColor: AppColors.darkPrimaryColor,
       appBar: AppBar(
+        leading: IconButton(onPressed: (){
+          Navigator.pop(context);
+        }, icon: Icon(CupertinoIcons.back)),
         title: Text(
-          'Add Players',
+          'Invite Players',
           style: AppTexts.emphasizedTextStyle(
             context: context,
             textColor: AppColors.textPrimaryColor,
@@ -150,135 +214,296 @@ class _AddPlayersScreenState extends State<AddPlayersScreen> {
           ),
         ),
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.darkSecondaryColor,
-              AppColors.darkPrimaryColor,
-              AppColors.darkTertiaryColor,
-            ],
-          ),
-        ),
-        child: Column(
-          children: [
-            // Search Header with Glass Effect
-            Container(
-              padding: EdgeInsets.all(screenWidth * 0.04),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.glassColor,
-                  borderRadius: BorderRadius.circular(screenWidth * 0.04),
-                  border: Border.all(
-                    color: AppColors.glassBorderColor,
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search players by name, email, or phone',
-                    hintStyle: AppTexts.bodyTextStyle(
-                      context: context,
-                      textColor: AppColors.textTertiaryColor,
-                      fontSize: AppFontSizes(context).size14,
-                    ),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: AppColors.primaryColor,
-                      size: screenWidth * 0.05,
-                    ),
-                    suffixIcon:
-                    _isSearching
-                        ? IconButton(
-                      icon: Icon(Icons.clear, color: AppColors.textSecondaryColor),
-                      onPressed: () {
-                        _searchController.clear();
-                      },
-                    )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.04,
-                      vertical: screenHeight * 0.015,
-                    ),
-                  ),
-                  style: AppTexts.bodyTextStyle(
-                    context: context,
-                    textColor: AppColors.textPrimaryColor,
-                    fontSize: AppFontSizes(context).size14,
-                  ),
-                ),
+      body: Consumer<TeamAddPlayersProvider>(
+        builder: (context, provider, child) {
+          return Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.darkSecondaryColor,
+                  AppColors.darkPrimaryColor,
+                  AppColors.darkTertiaryColor,
+                ],
               ),
             ),
-
-            // Players List
-            Expanded(
-              child:
-              _isLoading
-                  ? Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    AppColors.primaryColor,
-                  ),
-                ),
-              )
-                  : _filteredPlayers.isEmpty
-                  ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.search_off,
-                      size: screenWidth * 0.15,
-                      color: AppColors.textTertiaryColor,
+            child: Column(
+              children: [
+                // Copy Invitation Link Button - Skeleton when loading
+                Container(
+                  padding: EdgeInsets.all(screenWidth * 0.04),
+                  child: Skeletonizer(
+                    enabled: provider.isLoading,
+                    enableSwitchAnimation: true,
+                    effect: ShimmerEffect(
+                      baseColor: AppColors.glassColor,
+                      highlightColor: AppColors.glassBorderColor.withOpacity(0.6),
+                      duration: const Duration(milliseconds: 1200),
                     ),
-                    SizedBox(height: screenHeight * 0.02),
-                    Text(
-                      _isSearching
-                          ? 'No players found'
-                          : 'No players available',
-                      style: AppTexts.bodyTextStyle(
-                        context: context,
-                        textColor: AppColors.textSecondaryColor,
-                        fontSize: AppFontSizes(context).size16,
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppColors.accentBlueColor,
+                            AppColors.accentPurpleColor,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(screenWidth * 0.04),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.accentBlueColor.withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Consumer<TeamProvider>(
+                        builder: (BuildContext context, TeamProvider teamProvider, Widget? child) {
+                          return ElevatedButton(
+                            onPressed: provider.isLoading ? null : () {
+                              _handleCopyInviteLink(context, teamProvider);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: AppColors.textPrimaryColor,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: screenWidth * 0.05,
+                                vertical: screenHeight * 0.018,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(screenWidth * 0.04),
+                              ),
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(screenWidth * 0.02),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.link,
+                                    size: screenWidth * 0.05,
+                                    color: AppColors.textPrimaryColor,
+                                  ),
+                                ),
+                                SizedBox(width: screenWidth * 0.03),
+                                Text(
+                                  'Copy Invitation Link',
+                                  style: AppTexts.bodyTextStyle(
+                                    context: context,
+                                    textColor: AppColors.textPrimaryColor,
+                                    fontSize: AppFontSizes(context).size16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(width: screenWidth * 0.02),
+                                Icon(
+                                  Icons.copy,
+                                  size: screenWidth * 0.04,
+                                  color: AppColors.textPrimaryColor.withOpacity(0.8),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              )
-                  : ListView.builder(
-                padding: EdgeInsets.all(screenWidth * 0.04),
-                itemCount: _filteredPlayers.length,
-                itemBuilder: (context, index) {
-                  final player = _filteredPlayers[index];
-                  return _buildPlayerCard(
-                    player,
-                    screenWidth,
-                    screenHeight,
-                  );
-                },
+
+                // Search Header with Glass Effect - Skeleton when loading
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+                  child: Skeletonizer(
+                    enabled: provider.isLoading,
+                    enableSwitchAnimation: true,
+                    effect: ShimmerEffect(
+                      baseColor: AppColors.glassColor,
+                      highlightColor: AppColors.glassBorderColor.withOpacity(0.6),
+                      duration: const Duration(milliseconds: 1200),
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.glassColor,
+                        borderRadius: BorderRadius.circular(screenWidth * 0.04),
+                        border: Border.all(
+                          color: AppColors.glassBorderColor,
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        enabled: !provider.isLoading,
+                        decoration: InputDecoration(
+                          hintText: 'Search players by name, email or phone (+92)',
+                          hintStyle: AppTexts.bodyTextStyle(
+                            context: context,
+                            textColor: AppColors.textTertiaryColor,
+                            fontSize: AppFontSizes(context).size14,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            color: AppColors.primaryColor,
+                            size: screenWidth * 0.05,
+                          ),
+                          suffixIcon: provider.isSearching
+                              ? IconButton(
+                            icon: Icon(
+                              Icons.clear,
+                              color: AppColors.textSecondaryColor,
+                            ),
+                            onPressed: _clearSearch,
+                          )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.04,
+                            vertical: screenHeight * 0.015,
+                          ),
+                        ),
+                        style: AppTexts.bodyTextStyle(
+                          context: context,
+                          textColor: AppColors.textPrimaryColor,
+                          fontSize: AppFontSizes(context).size14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                SizedBox(height: screenHeight * 0.02),
+
+                // Players List with Skeleton Loading
+                Expanded(
+                  child: _buildPlayersList(provider, screenWidth, screenHeight),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPlayersList(
+      TeamAddPlayersProvider provider,
+      double screenWidth,
+      double screenHeight,
+      ) {
+    if (provider.isLoading) {
+      return Skeletonizer(
+        enabled: true,
+        enableSwitchAnimation: true,
+        effect: ShimmerEffect(
+          baseColor: AppColors.glassColor,
+          highlightColor: AppColors.glassBorderColor.withOpacity(0.6),
+          duration: const Duration(milliseconds: 1200),
+        ),
+        child: ListView.builder(
+          padding: EdgeInsets.all(screenWidth * 0.04),
+          itemCount: 8,
+          itemBuilder: (context, index) {
+            return _buildSkeletonCard(screenWidth, screenHeight);
+          },
+        ),
+      );
+    }
+
+    if (provider.filteredPlayers.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off,
+              size: screenWidth * 0.15,
+              color: AppColors.textTertiaryColor,
+            ),
+            SizedBox(height: screenHeight * 0.02),
+            Text(
+              provider.isSearching
+                  ? 'No players found'
+                  : 'No players available',
+              style: AppTexts.bodyTextStyle(
+                context: context,
+                textColor: AppColors.textSecondaryColor,
+                fontSize: AppFontSizes(context).size16,
               ),
             ),
+            if (!provider.isSearching) ...[
+              SizedBox(height: screenHeight * 0.02),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primaryColor,
+                      AppColors.primaryLightColor,
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(screenWidth * 0.02),
+                ),
+                child: ElevatedButton(
+                  onPressed: provider.refresh,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: AppColors.textPrimaryColor,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(screenWidth * 0.02),
+                    ),
+                  ),
+                  child: Text(
+                    'Refresh',
+                    style: AppTexts.bodyTextStyle(
+                      context: context,
+                      textColor: AppColors.textPrimaryColor,
+                      fontSize: AppFontSizes(context).size14,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: provider.refresh,
+      color: AppColors.primaryColor,
+      backgroundColor: AppColors.darkSecondaryColor,
+      child: ListView.builder(
+        padding: EdgeInsets.all(screenWidth * 0.04),
+        itemCount: provider.filteredPlayers.length,
+        itemBuilder: (context, index) {
+          final player = provider.filteredPlayers[index];
+          return _buildPlayerCard(player, screenWidth, screenHeight, provider);
+        },
       ),
     );
   }
 
   Widget _buildPlayerCard(
-      AllPlayersModel player,
+      TeamAddPlayersModel player,
       double screenWidth,
       double screenHeight,
+      TeamAddPlayersProvider provider,
       ) {
     return Container(
       margin: EdgeInsets.only(bottom: screenHeight * 0.015),
@@ -287,10 +512,7 @@ class _AddPlayersScreenState extends State<AddPlayersScreen> {
         decoration: BoxDecoration(
           color: AppColors.glassColor,
           borderRadius: BorderRadius.circular(screenWidth * 0.04),
-          border: Border.all(
-            color: AppColors.glassBorderColor,
-            width: 1,
-          ),
+          border: Border.all(color: AppColors.glassBorderColor, width: 1),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
@@ -313,10 +535,7 @@ class _AddPlayersScreenState extends State<AddPlayersScreen> {
                     AppColors.accentPurpleColor,
                   ],
                 ),
-                border: Border.all(
-                  color: AppColors.glassBorderColor,
-                  width: 2,
-                ),
+                border: Border.all(color: AppColors.glassBorderColor, width: 2),
               ),
               child: Icon(
                 Icons.person,
@@ -338,47 +557,6 @@ class _AddPlayersScreenState extends State<AddPlayersScreen> {
                       textColor: AppColors.textPrimaryColor,
                       fontSize: AppFontSizes(context).size16,
                     ),
-                  ),
-                  SizedBox(height: screenHeight * 0.005),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.email,
-                        color: AppColors.textTertiaryColor,
-                        size: screenWidth * 0.035,
-                      ),
-                      SizedBox(width: screenWidth * 0.01),
-                      Expanded(
-                        child: Text(
-                          player.email,
-                          style: AppTexts.bodyTextStyle(
-                            context: context,
-                            textColor: AppColors.textSecondaryColor,
-                            fontSize: AppFontSizes(context).size12,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: screenHeight * 0.003),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.phone,
-                        color: AppColors.textTertiaryColor,
-                        size: screenWidth * 0.035,
-                      ),
-                      SizedBox(width: screenWidth * 0.01),
-                      Text(
-                        player.phone,
-                        style: AppTexts.bodyTextStyle(
-                          context: context,
-                          textColor: AppColors.textSecondaryColor,
-                          fontSize: AppFontSizes(context).size12,
-                        ),
-                      ),
-                    ],
                   ),
                   SizedBox(height: screenHeight * 0.003),
                   Row(
@@ -408,10 +586,7 @@ class _AddPlayersScreenState extends State<AddPlayersScreen> {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    AppColors.primaryColor,
-                    AppColors.primaryLightColor,
-                  ],
+                  colors: [AppColors.primaryColor, AppColors.primaryLightColor],
                 ),
                 borderRadius: BorderRadius.circular(screenWidth * 0.03),
                 boxShadow: [
@@ -423,7 +598,9 @@ class _AddPlayersScreenState extends State<AddPlayersScreen> {
                 ],
               ),
               child: ElevatedButton(
-                onPressed: () => _addPlayer(player.id),
+                onPressed: provider.addingPlayerId != null
+                    ? null
+                    : () => _handleAddPlayer(player.id),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   foregroundColor: AppColors.textPrimaryColor,
@@ -437,13 +614,16 @@ class _AddPlayersScreenState extends State<AddPlayersScreen> {
                   elevation: 0,
                   shadowColor: Colors.transparent,
                 ),
-                child: Row(
+                child: provider.addingPlayerId == player.id
+                    ? SpinKitCircle(
+                    color: AppColors.whiteColor,
+                    size: screenWidth * 0.05
+                )
+                    : Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.add, size: screenWidth * 0.04),
-                    SizedBox(width: screenWidth * 0.01),
                     Text(
-                      'Add',
+                      'Invite',
                       style: AppTexts.bodyTextStyle(
                         context: context,
                         textColor: AppColors.textPrimaryColor,

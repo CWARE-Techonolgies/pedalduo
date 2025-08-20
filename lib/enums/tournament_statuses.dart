@@ -13,7 +13,7 @@ extension TournamentStatusExtension on TournamentStatus {
       case TournamentStatus.underReview:
         return 'Under Review';
       case TournamentStatus.approved:
-        return 'Approved';
+        return 'Up Coming';
       case TournamentStatus.rejected:
         return 'Rejected';
       case TournamentStatus.ongoing:

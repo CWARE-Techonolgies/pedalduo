@@ -1,4 +1,4 @@
-package com.example.pedalduo
+package com.app.padelduo
 
 import io.flutter.embedding.android.FlutterActivity
 

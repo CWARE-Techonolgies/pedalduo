@@ -63,6 +63,7 @@ class InvitationsProvider extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        print('the sent invitation $data');
         if (data['success'] == true) {
           _sentInvitations =
               (data['data'] as List)
@@ -108,6 +109,7 @@ class InvitationsProvider extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        print('recived invitation $data');
         if (data['success'] == true) {
           _receivedInvitations =
               (data['data'] as List)
@@ -367,7 +369,7 @@ class InvitationsProvider extends ChangeNotifier {
   }
 
   bool teamHasSpace(Invitation invitation) {
-    return invitation.team.totalPlayers < invitation.tournament.playersPerTeam;
+    return invitation.team.totalPlayers < invitation.team.maxPlayers;
   }
 
   bool isInvitationExpired(Invitation invitation) {
@@ -375,7 +377,9 @@ class InvitationsProvider extends ChangeNotifier {
   }
 
   bool hasTournamentStarted(Invitation invitation) {
-    return DateTime.now().isAfter(invitation.tournament.tournamentStartDate);
+    // Since tournament data might be missing, we'll assume tournament hasn't started
+    if (invitation.tournament == null) return false;
+    return DateTime.now().isAfter(invitation.tournament!.tournamentStartDate);
   }
 
   List<Invitation> get actionableReceivedInvitations {
@@ -390,7 +394,7 @@ class InvitationsProvider extends ChangeNotifier {
         .toList();
   }
 
-  // Modify handleInvitationAction to be the single source of error handling
+  // Modified to handle cases where tournament data might be missing
   Future<bool> handleInvitationAction(
       BuildContext context,
       String invitationCode,

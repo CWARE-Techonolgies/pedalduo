@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:pedalduo/views/play/brackets/schedule_match_dialogue.dart';
-import 'package:pedalduo/views/play/brackets/score_dialogue.dart';
+import 'package:pedalduo/views/play/brackets/tennis_scoreing.dart';
 import 'package:pedalduo/views/play/brackets/winner_team_dialogue.dart';
 import 'package:provider/provider.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -43,7 +43,18 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  bool _hasShownWinnerDialog = false; // Track if dialog has been shown
 
+  // bool _isFinalRound() {
+  //   final provider = context.read<Brackets>();
+  //   if (provider.tournamentData == null) return false;
+  //
+  //   final rounds = provider.getSortedRounds();
+  //   if (rounds.isEmpty) return false;
+  //
+  //   final latestRound = rounds.last;
+  //   return latestRound.roundName.toLowerCase().contains('final');
+  // }
   bool _isFinalRound() {
     final provider = context.read<Brackets>();
     if (provider.tournamentData == null) return false;
@@ -51,8 +62,8 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
     final rounds = provider.getSortedRounds();
     if (rounds.isEmpty) return false;
 
-    final latestRound = rounds.last;
-    return latestRound.roundName.toLowerCase() == 'final';
+    // This is the final round if it's the last round and has exactly 1 match
+    return rounds.last.matches.length == 1;
   }
 
   bool _isFinalMatchCompleted() {
@@ -75,42 +86,88 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
     final rounds = provider.getSortedRounds();
     if (rounds.isEmpty) return null;
 
-    final latestRound = rounds.last;
-    if (!latestRound.roundName.toLowerCase().contains('final')) return null;
+    // Look for the final round (could be named "Final", "Finals", etc.)
+    TournamentRound? finalRound;
+    for (int i = rounds.length - 1; i >= 0; i--) {
+      if (rounds[i].roundName.toLowerCase().contains('final')) {
+        finalRound = rounds[i];
+        break;
+      }
+    }
 
-    final finalMatch = latestRound.matches.firstWhere(
-      (match) => match.isCompleted,
-      orElse: () => latestRound.matches.first,
-    );
+    // If no "final" round found, assume the last round is the final
+    finalRound ??= rounds.last;
 
-    if (finalMatch.isCompleted) {
-      if (finalMatch.team1Score != null && finalMatch.team2Score != null) {
-        final team1Score = int.tryParse(finalMatch.team1Score.toString()) ?? 0;
-        final team2Score = int.tryParse(finalMatch.team2Score.toString()) ?? 0;
+    if (kDebugMode) {
+      print('Final round: ${finalRound.roundName}');
+      print('Matches in final round: ${finalRound.matches.length}');
+    }
 
-        if (team1Score > team2Score) {
-          return finalMatch.team1;
-        } else {
-          return finalMatch.team2;
-        }
+    // Find completed matches in the final round
+    final completedMatches =
+        finalRound.matches.where((match) => match.isCompleted).toList();
+
+    if (completedMatches.isEmpty) {
+      if (kDebugMode) {
+        print('No completed matches in final round');
+      }
+      return null;
+    }
+
+    // For final round, there should typically be only one match
+    // But let's handle multiple matches by finding the one with the highest stakes
+    final finalMatch = completedMatches.first;
+
+    if (kDebugMode) {
+      print(
+        'Final match: ${finalMatch.team1?.name} vs ${finalMatch.team2?.name}',
+      );
+      print('Scores: ${finalMatch.team1Score} - ${finalMatch.team2Score}');
+    }
+
+    if (finalMatch.team1Score != null && finalMatch.team2Score != null) {
+      final team1Score = int.tryParse(finalMatch.team1Score.toString()) ?? 0;
+      final team2Score = int.tryParse(finalMatch.team2Score.toString()) ?? 0;
+
+      if (team1Score > team2Score) {
+        return finalMatch.team1;
+      } else if (team2Score > team1Score) {
+        return finalMatch.team2;
       }
     }
 
     return null;
   }
 
-  void _showWinnerDialog() {
+  void _checkAndShowWinnerDialog() {
+    // Don't show if already shown
+    if (_hasShownWinnerDialog) return;
+
+    // Only proceed if this is the final round and it's completed
+    if (!_isFinalRound() || !_isFinalMatchCompleted()) return;
+
     final winnerTeam = _getWinnerTeam();
+    if (kDebugMode) {
+      print('Winner team: ${winnerTeam?.name}');
+    }
+
     if (winnerTeam != null) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder:
-            (context) => WinnerDialog(
-              winnerTeam: winnerTeam,
-              onClose: () => Navigator.of(context).pop(),
-            ),
-      );
+      _hasShownWinnerDialog = true;
+      Future.delayed(const Duration(milliseconds: 1200), () {
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder:
+                (context) => WinnerDialog(
+                  winnerTeam: winnerTeam,
+                  onClose: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+          );
+        }
+      });
     }
   }
 
@@ -118,8 +175,11 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
   void initState() {
     super.initState();
     if (kDebugMode) {
-      print('id: ${widget.tournamentId}');
+      print('Tournament ID: ${widget.tournamentId}');
+      print('Tournament Status: ${widget.tournamentStatus}');
+      print('Winner Team ID: ${widget.winnerTeamId}');
     }
+
     // Initialize animations
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -142,18 +202,14 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<Brackets>().fetchTournamentData(widget.tournamentId);
+      context.read<Brackets>().fetchTournamentData(widget.tournamentId).then((
+        _,
+      ) {
+        // Check for winner dialog after data is loaded
+        _checkAndShowWinnerDialog();
+      });
       _fadeController.forward();
       _slideController.forward();
-
-      if (widget.tournamentStatus == 'Completed' &&
-          widget.winnerTeamId != null) {
-        Future.delayed(const Duration(milliseconds: 1200), () {
-          if (mounted) {
-            _showWinnerDialog();
-          }
-        });
-      }
     });
   }
 
@@ -199,6 +255,11 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
                     if (provider.tournamentData == null) {
                       return _buildEmptyView();
                     }
+
+                    // Check for winner dialog whenever the UI rebuilds with new data
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _checkAndShowWinnerDialog();
+                    });
 
                     return _buildTournamentBrackets(provider);
                   },
@@ -252,7 +313,36 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
       ),
       centerTitle: true,
       actions: [
-        if (widget.isOrganizer)
+        // Share Tournament Button
+        Container(
+          margin: const EdgeInsets.only(right: 8),
+          decoration: BoxDecoration(
+            color: AppColors.glassColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.glassBorderColor, width: 0.5),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                context.read<Brackets>().shareTournamentScore(
+                  widget.tournamentId,
+                  context,
+                );
+              },
+              child: const Padding(
+                padding: EdgeInsets.all(12),
+                child: Icon(
+                  Icons.share,
+                  color: AppColors.textPrimaryColor,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+        ),
+
           Container(
             margin: const EdgeInsets.only(right: 16),
             decoration: BoxDecoration(
@@ -265,6 +355,7 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
                 onTap: () {
+                  _hasShownWinnerDialog = false;
                   context.read<Brackets>().fetchTournamentData(
                     widget.tournamentId,
                   );
@@ -428,7 +519,7 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
                   borderRadius: BorderRadius.circular(50),
                 ),
                 child: Icon(
-                  Icons.sports_cricket_rounded,
+                  Icons.sports_tennis,
                   size: 48,
                   color: AppColors.textSecondaryColor,
                 ),
@@ -615,10 +706,10 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
                         widget.tournamentId,
                         widget.tournamentStartDate,
                         widget.tournamentEndDate,
+                        _isFinalRound(),
                       ),
                   onUpdateScore: _updateScore,
                 );
-                ;
               },
             );
           }),
@@ -629,7 +720,7 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
 
   Widget _buildActionButton(Brackets provider) {
     final isFinal = _isFinalRound();
-    final isFinalCompleted = _isFinalMatchCompleted();
+    final isFinalCompleted = isFinal && _isFinalMatchCompleted();
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -648,7 +739,7 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
               color: Colors.transparent,
               child: InkWell(
                 onTap:
-                    isFinal && isFinalCompleted
+                    isFinalCompleted
                         ? () => Navigator.of(context).pop()
                         : provider.canGenerateNextRound()
                         ? () => provider.generateNextRound(
@@ -661,7 +752,7 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors:
-                          isFinal && isFinalCompleted
+                          isFinalCompleted
                               ? [
                                 AppColors.errorColor,
                                 AppColors.errorColor.withOpacity(0.8),
@@ -685,7 +776,7 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                isFinal && isFinalCompleted
+                                isFinalCompleted
                                     ? Icons.close_rounded
                                     : Icons.refresh_rounded,
                                 size: 24,
@@ -693,7 +784,7 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
                               ),
                               const SizedBox(width: 12),
                               Text(
-                                isFinal && isFinalCompleted
+                                isFinalCompleted
                                     ? 'Close Tournament'
                                     : 'Generate Next Round',
                                 style: AppTexts.emphasizedTextStyle(
@@ -755,6 +846,7 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
     String tournamentId,
     DateTime tournamentStartDate,
     DateTime tournamentEndDate,
+    bool isFinal,
   ) {
     showDialog(
       context: context,
@@ -764,6 +856,7 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
             tournamentId: tournamentId,
             tournamentStartDate: tournamentStartDate,
             tournamentEndDate: tournamentEndDate,
+            isFinal: isFinal,
           ),
     );
   }
@@ -771,7 +864,13 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
   Future<void> _updateScore(MyMatch match) async {
     final result = await Navigator.push<UpdateScoreRequest>(
       context,
-      MaterialPageRoute(builder: (context) => ScoreScreen(match: match)),
+      MaterialPageRoute(
+        builder:
+            (context) => TennisScoringScreen(
+              matchId: match.id,
+              tournamentId: match.tournamentId,
+            ),
+      ),
     );
 
     if (result != null) {
@@ -812,6 +911,14 @@ class _AllBracketsViewsState extends State<AllBracketsViews>
             elevation: 0,
           ),
         );
+
+        // Check for winner dialog after score update
+        if (success) {
+          _hasShownWinnerDialog = false; // Reset flag to allow checking again
+          Future.delayed(const Duration(milliseconds: 500), () {
+            _checkAndShowWinnerDialog();
+          });
+        }
       }
     }
   }

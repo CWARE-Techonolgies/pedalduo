@@ -9,7 +9,7 @@ class Invitation {
   final DateTime expiresAt;
   final DateTime createdAt;
   final Team team;
-  final Tournament tournament;
+  final Tournament? tournament; // Made nullable since it's missing in API
   final User? invitee;
   final User? inviter;
 
@@ -24,7 +24,7 @@ class Invitation {
     required this.expiresAt,
     required this.createdAt,
     required this.team,
-    required this.tournament,
+    this.tournament,
     this.invitee,
     this.inviter,
   });
@@ -39,13 +39,13 @@ class Invitation {
       inviteePhone: json['invitee_phone'],
       message: json['message'] ?? '',
       expiresAt: DateTime.parse(
-        json['expires_at'] ?? DateTime.now().toIso8601String(),
+        json['expires_at'] ?? DateTime.now().add(Duration(days: 7)).toIso8601String(),
       ),
       createdAt: DateTime.parse(
         json['createdAt'] ?? DateTime.now().toIso8601String(),
       ),
       team: Team.fromJson(json['team'] ?? {}),
-      tournament: Tournament.fromJson(json['tournament'] ?? {}),
+      tournament: json['tournament'] != null ? Tournament.fromJson(json['tournament']) : null,
       invitee: json['invitee'] != null ? User.fromJson(json['invitee']) : null,
       inviter: json['inviter'] != null ? User.fromJson(json['inviter']) : null,
     );
@@ -61,14 +61,22 @@ class Team {
   final int id;
   final String name;
   final int totalPlayers;
+  final int maxPlayers;
 
-  Team({required this.id, required this.name, required this.totalPlayers});
+  Team({
+    required this.id,
+    required this.name,
+    required this.totalPlayers,
+    required this.maxPlayers,
+  });
 
   factory Team.fromJson(Map<String, dynamic> json) {
     return Team(
       id: json['id'] ?? 0,
       name: json['name'] ?? 'Unknown Team',
-      totalPlayers: json['total_players'] ?? 0,
+      // Handle both old and new field names
+      totalPlayers: json['total_players'] ?? json['total_members'] ?? 0,
+      maxPlayers: json['players_per_team'] ?? json['max_members'] ?? 0,
     );
   }
 }
@@ -95,10 +103,10 @@ class Tournament {
       id: json['id'] ?? 0,
       title: json['title'] ?? 'Unknown Tournament',
       location: json['location'] ?? 'TBD',
-      playersPerTeam: json['players_per_team'] ?? 0,
-      gender: json['gender'] ?? '',
+      playersPerTeam: json['players_per_team'] ?? json['max_members'] ?? 0,
+      gender: json['gender'] ?? 'Mixed',
       tournamentStartDate: DateTime.parse(
-        json['tournament_start_date'] ?? DateTime.now().toIso8601String(),
+        json['tournament_start_date'] ?? DateTime.now().add(Duration(days: 30)).toIso8601String(),
       ),
     );
   }

@@ -9,11 +9,11 @@ import 'package:pedalduo/views/play/models/tournaments_model.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
-
 import '../../../enums/tournament_statuses.dart';
 import '../../../global/images.dart';
 import '../../../payments/easy_paisa_payment_provider.dart';
 import '../../../payments/easypaisa_payment_dialogue.dart';
+import '../../../providers/navigation_provider.dart';
 import '../../../style/colors.dart';
 import '../../../style/fonts_sizes.dart';
 import '../../../style/texts.dart';
@@ -24,8 +24,6 @@ import '../widgets/build_detail_row.dart';
 import '../widgets/build_info_item.dart';
 import '../widgets/build_skeleton_loader.dart';
 import '../widgets/error_state.dart';
-import '../widgets/register_team_dialogue.dart';
-import '../widgets/sub_tab_button.dart';
 import 'create_tournament_screen.dart';
 
 class TournamentsTab extends StatefulWidget {
@@ -153,6 +151,9 @@ class _TournamentsTabState extends State<TournamentsTab> {
 
               SizedBox(height: screenHeight * 0.03),
 
+              // Filter Section
+              // _buildFilterSection(context, provider),
+              SizedBox(height: screenHeight * 0.02),
               // Content based on selected tab
               Expanded(child: _buildTabContent(context, provider)),
             ],
@@ -385,64 +386,63 @@ class _TournamentsTabState extends State<TournamentsTab> {
             AppColors.blueColor.withOpacity(0.4),
           ],
         ),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.image_outlined,
-          size: screenWidth * 0.15,
-          color: AppColors.whiteColor.withOpacity(0.6),
+        image: DecorationImage(
+          image: AssetImage(AppImages.placeholderTournament),
+          fit: BoxFit.cover,
         ),
       ),
     );
   }
 
-  Widget _buildStatusChip(BuildContext context, String status) {
+  Widget _buildStatusChip(BuildContext context, TournamentStatus status) {
     final screenWidth = MediaQuery.of(context).size.width;
 
     Color chipColor;
     List<Color> gradientColors;
-    switch (status.toLowerCase()) {
-      case 'approved':
+
+    switch (status) {
+      case TournamentStatus.approved:
         chipColor = AppColors.followColor;
         gradientColors = [
           AppColors.followColor.withOpacity(0.8),
           AppColors.followColor.withOpacity(0.6),
         ];
         break;
-      case 'under review':
+      case TournamentStatus.underReview:
         chipColor = AppColors.goldColor;
         gradientColors = [
           AppColors.goldColor.withOpacity(0.8),
           AppColors.goldColor.withOpacity(0.6),
         ];
         break;
-      case 'rejected':
+      case TournamentStatus.rejected:
         chipColor = AppColors.redColor;
         gradientColors = [
           AppColors.redColor.withOpacity(0.8),
           AppColors.redColor.withOpacity(0.6),
         ];
         break;
-      case 'ongoing':
+      case TournamentStatus.ongoing:
         chipColor = AppColors.blueColor;
         gradientColors = [
           AppColors.blueColor.withOpacity(0.8),
           AppColors.blueColor.withOpacity(0.6),
         ];
         break;
-      case 'cancelled':
+      case TournamentStatus.cancelled:
         chipColor = AppColors.orangeColor;
         gradientColors = [
           AppColors.orangeColor.withOpacity(0.8),
           AppColors.orangeColor.withOpacity(0.6),
         ];
         break;
-      default:
+      case TournamentStatus.completed:
         chipColor = AppColors.greyColor;
         gradientColors = [
           AppColors.greyColor.withOpacity(0.8),
           AppColors.greyColor.withOpacity(0.6),
         ];
+        break;
     }
 
     return Container(
@@ -466,16 +466,13 @@ class _TournamentsTabState extends State<TournamentsTab> {
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(screenWidth * 0.04),
-        child: Text(
-          status,
-          style: AppTexts.bodyTextStyle(
-            context: context,
-            textColor: AppColors.whiteColor,
-            fontSize: AppFontSizes(context).size10,
-            fontWeight: FontWeight.w600,
-          ),
+      child: Text(
+        status.displayName, // ✅ uses extension (e.g., "Up Coming")
+        style: AppTexts.bodyTextStyle(
+          context: context,
+          textColor: AppColors.whiteColor,
+          fontSize: AppFontSizes(context).size10,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -541,7 +538,8 @@ class _TournamentsTabState extends State<TournamentsTab> {
 
   Widget _buildTabContent(BuildContext context, TournamentProvider provider) {
     final screenWidth = MediaQuery.of(context).size.width;
-    // Show loading state with skeletonizer
+
+    // Show loading state
     if (provider.isLoadingTournaments) {
       return BuildSkeletonLoader();
     }
@@ -549,27 +547,25 @@ class _TournamentsTabState extends State<TournamentsTab> {
     // Show error state
     if (provider.errorMessage.isNotEmpty) {
       return ErrorState(
-        provider: TournamentProvider(),
+        provider: provider,
         onTap: () {
           _loadTournaments(provider);
         },
       );
     }
 
-    // Handle different tabs
+    // Handle "My Tournaments" tab
     if (provider.selectedSubTabIndex == 0) {
-      // My Tournaments - combine organized and played tournaments
+      // Combine organized + played tournaments
       final myTournaments = [
         ...provider.organizedTournaments,
         ...provider.playedTournaments,
       ];
 
-      // Show empty state
       if (myTournaments.isEmpty) {
         return _buildEmptyState(context, provider);
       }
 
-      // Show my tournaments list
       return RefreshIndicator(
         onRefresh: () async => _loadTournaments(provider),
         color: AppColors.orangeColor,
@@ -584,15 +580,13 @@ class _TournamentsTabState extends State<TournamentsTab> {
         ),
       );
     } else {
-      // All Tournaments
+      // Handle "All Tournaments" tab
       final allTournaments = provider.allTournaments;
 
-      // Show empty state
       if (allTournaments.isEmpty) {
         return _buildEmptyState(context, provider);
       }
 
-      // Show all tournaments list
       return RefreshIndicator(
         onRefresh: () async => _loadTournaments(provider),
         color: AppColors.orangeColor,
@@ -648,32 +642,37 @@ class _TournamentsTabState extends State<TournamentsTab> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Tournament Image
-              ClipRRect(
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(screenWidth * 0.06),
-                  topRight: Radius.circular(screenWidth * 0.06),
+              InkWell(
+                onTap: () {
+                  _showTournamentDetails(context, tournament, provider);
+                },
+                child: ClipRRect(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(screenWidth * 0.06),
+                    topRight: Radius.circular(screenWidth * 0.06),
+                  ),
+                  child:
+                      (tournament.imageUrl != null &&
+                              tournament.imageUrl!.isNotEmpty)
+                          ? Image.memory(
+                            _decodeBase64Image(tournament.imageUrl!),
+                            height: screenHeight * 0.2,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return _buildLetterPlaceholder(
+                                screenWidth,
+                                screenHeight,
+                                tournament.title,
+                              );
+                            },
+                          )
+                          : _buildLetterPlaceholder(
+                            screenWidth,
+                            screenHeight,
+                            tournament.title,
+                          ),
                 ),
-                child:
-                    (tournament.imageUrl != null &&
-                            tournament.imageUrl!.isNotEmpty)
-                        ? Image.memory(
-                          _decodeBase64Image(tournament.imageUrl!),
-                          height: screenHeight * 0.2,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return _buildLetterPlaceholder(
-                              screenWidth,
-                              screenHeight,
-                              tournament.title,
-                            );
-                          },
-                        )
-                        : _buildLetterPlaceholder(
-                          screenWidth,
-                          screenHeight,
-                          tournament.title,
-                        ),
               ),
 
               // Tournament Details
@@ -697,7 +696,11 @@ class _TournamentsTabState extends State<TournamentsTab> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        _buildStatusChip(context, tournament.status),
+                        if (!isRegistrationClosed)
+                          _buildStatusChip(
+                            context,
+                            tournament.status.toTournamentStatus(),
+                          ),
                       ],
                     ),
 
@@ -892,90 +895,186 @@ class _TournamentsTabState extends State<TournamentsTab> {
                     SizedBox(height: screenHeight * 0.02),
 
                     // Action Buttons
-                    Visibility(
-                      visible:
-                          tournament.status ==
-                              TournamentStatus.ongoing.displayName ||
-                          tournament.status ==
-                              TournamentStatus.completed.displayName,
-                      child: Consumer<Brackets>(
-                        builder: (
-                          BuildContext context,
-                          Brackets brackets,
-                          Widget? child,
-                        ) {
-                          return GestureDetector(
-                            onTap: () {
-                              print(
-                                'tournament status is ${tournament.status}',
-                              );
-                              print(
-                                'tournament winner is ${tournament.winnerTeamId.toString()}',
-                              );
-                              brackets.showTournamentBrackets(
-                                context,
-                                tournament,
-                                provider,
-                                false,
-                                tournament.id.toString(),
-                                tournament.title,
-                                tournament.winnerTeamId,
-                                tournament.status,
-                                tournament.tournamentStartDate,
-                                tournament.tournamentEndDate,
-                              );
-                            },
-                            child: Container(
-                              width: double.infinity,
-                              height: screenHeight * 0.05,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    AppColors.purpleColor.withOpacity(0.8),
-                                    AppColors.blueColor.withOpacity(0.6),
+                    Column(
+                      children: [
+                        // View Details Button - Always visible
+                        Consumer<NavigationProvider>(
+                          builder: (
+                            BuildContext context,
+                            NavigationProvider value,
+                            Widget? child,
+                          ) {
+                            return GestureDetector(
+                              onTap: () {
+                                isRegistrationClosed
+                                    ? null
+                                    : value.goToTab(context, 1);
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                height: screenHeight * 0.05,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      isRegistrationClosed
+                                          ? AppColors.redColor.withOpacity(0.8)
+                                          : AppColors.orangeColor.withOpacity(
+                                            0.8,
+                                          ),
+                                      isRegistrationClosed
+                                          ? AppColors.redColor.withOpacity(0.6)
+                                          : AppColors.lightOrangeColor
+                                              .withOpacity(0.6),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(
+                                    screenWidth * 0.06,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.orangeColor.withOpacity(
+                                        0.3,
+                                      ),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
                                   ],
                                 ),
-                                borderRadius: BorderRadius.circular(
-                                  screenWidth * 0.06,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.purpleColor.withOpacity(
-                                      0.3,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(
+                                    screenWidth * 0.06,
+                                  ),
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(
+                                      sigmaX: 10,
+                                      sigmaY: 10,
                                     ),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(
-                                  screenWidth * 0.06,
-                                ),
-                                child: BackdropFilter(
-                                  filter: ImageFilter.blur(
-                                    sigmaX: 10,
-                                    sigmaY: 10,
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      'View Brackets',
-                                      style: AppTexts.bodyTextStyle(
-                                        context: context,
-                                        textColor: AppColors.whiteColor,
-                                        fontSize: AppFontSizes(context).size14,
-                                        fontWeight: FontWeight.w500,
+                                    child: Center(
+                                      child: Text(
+                                        isRegistrationClosed
+                                            ? 'Registration Closed'
+                                            : (tournament.status ==
+                                                    TournamentStatus
+                                                        .cancelled
+                                                        .displayName
+                                                ? 'Tournament Cancelled'
+                                                : 'Register your team'),
+                                        style: AppTexts.bodyTextStyle(
+                                          context: context,
+                                          textColor: AppColors.whiteColor,
+                                          fontSize:
+                                              AppFontSizes(context).size14,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                          );
-                        },
-                      ),
+                            );
+                          },
+                        ),
+
+                        // View Brackets Button - Only for ongoing/completed tournaments
+                        Visibility(
+                          visible:
+                              tournament.status ==
+                                  TournamentStatus.ongoing.displayName ||
+                              tournament.status ==
+                                  TournamentStatus.completed.displayName,
+                          child: Column(
+                            children: [
+                              SizedBox(height: screenHeight * 0.01),
+                              Consumer<Brackets>(
+                                builder: (
+                                  BuildContext context,
+                                  Brackets brackets,
+                                  Widget? child,
+                                ) {
+                                  return GestureDetector(
+                                    onTap: () {
+                                      print(
+                                        'tournament status is ${tournament.status}',
+                                      );
+                                      print(
+                                        'tournament winner is ${tournament.winnerTeamId.toString()}',
+                                      );
+                                      brackets.showTournamentBrackets(
+                                        context,
+                                        tournament,
+                                        provider,
+                                        false,
+                                        tournament.id.toString(),
+                                        tournament.title,
+                                        tournament.winnerTeamId,
+                                        tournament.status,
+                                        tournament.tournamentStartDate,
+                                        tournament.tournamentEndDate,
+                                      );
+                                    },
+                                    child: Container(
+                                      width: double.infinity,
+                                      height: screenHeight * 0.05,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            AppColors.purpleColor.withOpacity(
+                                              0.8,
+                                            ),
+                                            AppColors.blueColor.withOpacity(
+                                              0.6,
+                                            ),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(
+                                          screenWidth * 0.06,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppColors.purpleColor
+                                                .withOpacity(0.3),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(
+                                          screenWidth * 0.06,
+                                        ),
+                                        child: BackdropFilter(
+                                          filter: ImageFilter.blur(
+                                            sigmaX: 10,
+                                            sigmaY: 10,
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              'View Brackets',
+                                              style: AppTexts.bodyTextStyle(
+                                                context: context,
+                                                textColor: AppColors.whiteColor,
+                                                fontSize:
+                                                    AppFontSizes(
+                                                      context,
+                                                    ).size14,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1025,26 +1124,31 @@ class _TournamentsTabState extends State<TournamentsTab> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Tournament Image
-              ClipRRect(
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(screenWidth * 0.06),
-                  topRight: Radius.circular(screenWidth * 0.06),
+              InkWell(
+                onTap: () {
+                  _showTournamentDetails(context, tournament, provider);
+                },
+                child: ClipRRect(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(screenWidth * 0.06),
+                    topRight: Radius.circular(screenWidth * 0.06),
+                  ),
+                  child:
+                      tournament.imageUrl.isNotEmpty
+                          ? Image.memory(
+                            _decodeBase64Image(tournament.imageUrl),
+                            height: screenHeight * 0.2,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return _buildPlaceholderImage(
+                                screenWidth,
+                                screenHeight,
+                              );
+                            },
+                          )
+                          : _buildPlaceholderImage(screenWidth, screenHeight),
                 ),
-                child:
-                    tournament.imageUrl.isNotEmpty
-                        ? Image.memory(
-                          _decodeBase64Image(tournament.imageUrl),
-                          height: screenHeight * 0.2,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return _buildPlaceholderImage(
-                              screenWidth,
-                              screenHeight,
-                            );
-                          },
-                        )
-                        : _buildPlaceholderImage(screenWidth, screenHeight),
               ),
 
               // Tournament Details
@@ -1068,7 +1172,11 @@ class _TournamentsTabState extends State<TournamentsTab> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        _buildStatusChip(context, tournament.status),
+                        if (!isRegistrationClosed)
+                          _buildStatusChip(
+                            context,
+                            tournament.status.toTournamentStatus(),
+                          ),
                       ],
                     ),
 
@@ -1420,9 +1528,7 @@ class _TournamentsTabState extends State<TournamentsTab> {
                             SizedBox(height: screenHeight * 0.01),
                             // Show Brackets Button
                             Visibility(
-                              visible:
-                                  tournament.status ==
-                                  TournamentStatus.approved.displayName,
+                              visible: tournament.status.toLowerCase() == 'approved',
                               child: Consumer<Brackets>(
                                 builder: (
                                   BuildContext context,
@@ -1610,99 +1716,104 @@ class _TournamentsTabState extends State<TournamentsTab> {
                         )
                         : Row(
                           children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap:
-                                    isRegistrationClosed
-                                        ? null
-                                        : () => _showTournamentDetails(
-                                          context,
-                                          tournament,
-                                          provider,
-                                        ),
-                                child: Container(
-                                  width: double.infinity,
-                                  height: screenHeight * 0.05,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        isRegistrationClosed ||
-                                                tournament.status ==
-                                                    TournamentStatus
-                                                        .cancelled
-                                                        .displayName
-                                            ? AppColors.redColor.withOpacity(
-                                              0.8,
-                                            )
-                                            : AppColors.orangeColor.withOpacity(
-                                              0.8,
-                                            ),
-                                        isRegistrationClosed ||
-                                                tournament.status ==
-                                                    TournamentStatus
-                                                        .cancelled
-                                                        .displayName
-                                            ? AppColors.redColor.withOpacity(
-                                              0.6,
-                                            )
-                                            : AppColors.lightOrangeColor
-                                                .withOpacity(0.6),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(
-                                      screenWidth * 0.06,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color:
+                            Consumer<NavigationProvider>(
+                              builder: (
+                                BuildContext context,
+                                NavigationProvider value,
+                                Widget? child,
+                              ) {
+                                return Expanded(
+                                  child: GestureDetector(
+                                    onTap:
+                                        isRegistrationClosed
+                                            ? null
+                                            : () {
+                                              value.goToTab(context, 1);
+                                            },
+                                    child: Container(
+                                      width: double.infinity,
+                                      height: screenHeight * 0.05,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
                                             isRegistrationClosed ||
                                                     tournament.status ==
                                                         TournamentStatus
                                                             .cancelled
                                                             .displayName
                                                 ? AppColors.redColor
-                                                    .withOpacity(0.3)
+                                                    .withOpacity(0.8)
                                                 : AppColors.orangeColor
-                                                    .withOpacity(0.3),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 4),
+                                                    .withOpacity(0.8),
+                                            isRegistrationClosed ||
+                                                    tournament.status ==
+                                                        TournamentStatus
+                                                            .cancelled
+                                                            .displayName
+                                                ? AppColors.redColor
+                                                    .withOpacity(0.6)
+                                                : AppColors.lightOrangeColor
+                                                    .withOpacity(0.6),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(
+                                          screenWidth * 0.06,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color:
+                                                isRegistrationClosed ||
+                                                        tournament.status ==
+                                                            TournamentStatus
+                                                                .cancelled
+                                                                .displayName
+                                                    ? AppColors.redColor
+                                                        .withOpacity(0.3)
+                                                    : AppColors.orangeColor
+                                                        .withOpacity(0.3),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(
-                                      screenWidth * 0.06,
-                                    ),
-                                    child: BackdropFilter(
-                                      filter: ImageFilter.blur(
-                                        sigmaX: 10,
-                                        sigmaY: 10,
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          isRegistrationClosed
-                                              ? 'Registration Closed'
-                                              : (tournament.status ==
-                                                      TournamentStatus
-                                                          .cancelled
-                                                          .displayName
-                                                  ? 'Tournament Cancelled'
-                                                  : 'View Details'),
-                                          style: AppTexts.bodyTextStyle(
-                                            context: context,
-                                            textColor: AppColors.whiteColor,
-                                            fontSize:
-                                                AppFontSizes(context).size14,
-                                            fontWeight: FontWeight.w500,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(
+                                          screenWidth * 0.06,
+                                        ),
+                                        child: BackdropFilter(
+                                          filter: ImageFilter.blur(
+                                            sigmaX: 10,
+                                            sigmaY: 10,
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              isRegistrationClosed
+                                                  ? 'Registration Closed'
+                                                  : (tournament.status ==
+                                                          TournamentStatus
+                                                              .cancelled
+                                                              .displayName
+                                                      ? 'Tournament Cancelled'
+                                                      : 'Register your team'),
+                                              style: AppTexts.bodyTextStyle(
+                                                context: context,
+                                                textColor: AppColors.whiteColor,
+                                                fontSize:
+                                                    AppFontSizes(
+                                                      context,
+                                                    ).size14,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ),
+                                );
+                              },
                             ),
                             Visibility(
                               visible: tournament.paymentStatus == 'Unpaid',
@@ -1798,6 +1909,128 @@ class _TournamentsTabState extends State<TournamentsTab> {
                             ),
                           ],
                         ),
+                    // Add this after the existing action buttons (around line 300+ in your card)
+                    // Check if tournament can be cancelled
+                    Visibility(
+                      visible:
+                          tournament.status ==
+                              TournamentStatus.approved.displayName ||
+                          tournament.status ==
+                              TournamentStatus.underReview.displayName,
+                      child: Column(
+                        children: [
+                          SizedBox(height: screenHeight * 0.01),
+                          Consumer<TournamentProvider>(
+                            builder: (context, tournamentProvider, child) {
+                              return GestureDetector(
+                                onTap:
+                                    tournamentProvider.isCancelLoading
+                                        ? null
+                                        : () => _showCancelConfirmationDialog(
+                                          context,
+                                          tournament,
+                                          provider,
+                                        ),
+                                child: Container(
+                                  width: double.infinity,
+                                  height: screenHeight * 0.05,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        tournamentProvider.isLoading
+                                            ? AppColors.greyColor.withOpacity(
+                                              0.8,
+                                            )
+                                            : AppColors.redColor.withOpacity(
+                                              0.8,
+                                            ),
+                                        tournamentProvider.isLoading
+                                            ? AppColors.greyColor.withOpacity(
+                                              0.6,
+                                            )
+                                            : AppColors.redColor.withOpacity(
+                                              0.6,
+                                            ),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(
+                                      screenWidth * 0.06,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color:
+                                            tournamentProvider.isLoading
+                                                ? AppColors.greyColor
+                                                    .withOpacity(0.2)
+                                                : AppColors.redColor
+                                                    .withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(
+                                      screenWidth * 0.06,
+                                    ),
+                                    child: BackdropFilter(
+                                      filter: ImageFilter.blur(
+                                        sigmaX: 10,
+                                        sigmaY: 10,
+                                      ),
+                                      child: Center(
+                                        child:
+                                            tournamentProvider.isLoading
+                                                ? SizedBox(
+                                                  height: 20,
+                                                  child: SpinKitThreeBounce(
+                                                    color: AppColors.whiteColor,
+                                                    size: screenWidth * 0.04,
+                                                  ),
+                                                )
+                                                : Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.cancel_outlined,
+                                                      color:
+                                                          AppColors.whiteColor,
+                                                      size: screenWidth * 0.04,
+                                                    ),
+                                                    SizedBox(
+                                                      width: screenWidth * 0.02,
+                                                    ),
+                                                    Text(
+                                                      'Cancel Tournament',
+                                                      style:
+                                                          AppTexts.bodyTextStyle(
+                                                            context: context,
+                                                            textColor:
+                                                                AppColors
+                                                                    .whiteColor,
+                                                            fontSize:
+                                                                AppFontSizes(
+                                                                  context,
+                                                                ).size14,
+                                                            fontWeight:
+                                                                FontWeight.w500,
+                                                          ),
+                                                    ),
+                                                  ],
+                                                ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1808,6 +2041,370 @@ class _TournamentsTabState extends State<TournamentsTab> {
     );
   }
 
+  void _showCancelConfirmationDialog(
+    BuildContext context,
+    MyTournament tournament,
+    TournamentProvider provider,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppColors.navyBlueGrey,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: AppColors.whiteColor.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          title: Text(
+            'Cancel Tournament',
+            style: AppTexts.emphasizedTextStyle(
+              context: dialogContext,
+              textColor: AppColors.whiteColor,
+              fontSize: AppFontSizes(dialogContext).size18,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Are you sure you want to cancel this tournament?',
+                style: AppTexts.bodyTextStyle(
+                  context: dialogContext,
+                  textColor: AppColors.whiteColor.withOpacity(0.8),
+                  fontSize: AppFontSizes(dialogContext).size14,
+                ),
+              ),
+              SizedBox(height: MediaQuery.of(dialogContext).size.height * 0.02),
+              Text(
+                '• Tournament: ${tournament.title}',
+                style: AppTexts.bodyTextStyle(
+                  context: dialogContext,
+                  textColor: AppColors.orangeColor,
+                  fontSize: AppFontSizes(dialogContext).size14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: MediaQuery.of(dialogContext).size.height * 0.01),
+              Text(
+                '• This action cannot be undone',
+                style: AppTexts.bodyTextStyle(
+                  context: dialogContext,
+                  textColor: AppColors.redColor,
+                  fontSize: AppFontSizes(dialogContext).size12,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(
+                'Keep Tournament',
+                style: AppTexts.bodyTextStyle(
+                  context: dialogContext,
+                  textColor: AppColors.whiteColor.withOpacity(0.7),
+                  fontSize: AppFontSizes(dialogContext).size14,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                // Close the dialog first
+                Navigator.of(dialogContext).pop();
+
+                // Then perform the cancellation
+                // Use the original context here, not the dialog context
+                await provider.cancelTournament(
+                  context: context,
+                  tournamentId: tournament.id,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.redColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: Text(
+                'Cancel Tournament',
+                style: AppTexts.bodyTextStyle(
+                  context: dialogContext,
+                  textColor: AppColors.whiteColor,
+                  fontSize: AppFontSizes(dialogContext).size14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Widget _buildFilterSection(BuildContext context, TournamentProvider provider) {
+  //   final screenWidth = MediaQuery.of(context).size.width;
+  //   final screenHeight = MediaQuery.of(context).size.height;
+  //
+  //   return AnimatedContainer(
+  //     duration: const Duration(milliseconds: 300),
+  //     margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+  //     child: Column(
+  //       children: [
+  //         // Filter Toggle Button
+  //         GestureDetector(
+  //           onTap: provider.toggleFilterOptions,
+  //           child: Container(
+  //             padding: EdgeInsets.symmetric(
+  //               horizontal: screenWidth * 0.04,
+  //               vertical: screenHeight * 0.015,
+  //             ),
+  //             decoration: BoxDecoration(
+  //               color: AppColors.whiteColor.withOpacity(0.1),
+  //               borderRadius: BorderRadius.circular(screenWidth * 0.06),
+  //               border: Border.all(
+  //                 color: AppColors.whiteColor.withOpacity(0.2),
+  //                 width: 1,
+  //               ),
+  //             ),
+  //             child: ClipRRect(
+  //               borderRadius: BorderRadius.circular(screenWidth * 0.06),
+  //               child: BackdropFilter(
+  //                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+  //                 child: Row(
+  //                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //                   children: [
+  //                     Row(
+  //                       children: [
+  //                         Container(
+  //                           padding: EdgeInsets.all(screenWidth * 0.02),
+  //                           decoration: BoxDecoration(
+  //                             gradient: LinearGradient(
+  //                               begin: Alignment.topLeft,
+  //                               end: Alignment.bottomRight,
+  //                               colors: [
+  //                                 AppColors.orangeColor.withOpacity(0.8),
+  //                                 AppColors.lightOrangeColor.withOpacity(0.6),
+  //                               ],
+  //                             ),
+  //                             borderRadius: BorderRadius.circular(screenWidth * 0.03),
+  //                           ),
+  //                           child: Icon(
+  //                             Icons.filter_list,
+  //                             color: AppColors.whiteColor,
+  //                             size: screenWidth * 0.05,
+  //                           ),
+  //                         ),
+  //                         SizedBox(width: screenWidth * 0.03),
+  //                         Column(
+  //                           crossAxisAlignment: CrossAxisAlignment.start,
+  //                           children: [
+  //                             Text(
+  //                               'Filter Tournaments',
+  //                               style: AppTexts.bodyTextStyle(
+  //                                 context: context,
+  //                                 textColor: AppColors.whiteColor,
+  //                                 fontSize: AppFontSizes(context).size16,
+  //                                 fontWeight: FontWeight.w600,
+  //                               ),
+  //                             ),
+  //                             Text(
+  //                               '${provider.selectedStatuses.length} status(es) selected',
+  //                               style: AppTexts.bodyTextStyle(
+  //                                 context: context,
+  //                                 textColor: AppColors.whiteColor.withOpacity(0.7),
+  //                                 fontSize: AppFontSizes(context).size12,
+  //                               ),
+  //                             ),
+  //                           ],
+  //                         ),
+  //                       ],
+  //                     ),
+  //                     AnimatedRotation(
+  //                       turns: provider.showFilterOptions ? 0.5 : 0,
+  //                       duration: const Duration(milliseconds: 300),
+  //                       child: Icon(
+  //                         Icons.expand_more,
+  //                         color: AppColors.whiteColor.withOpacity(0.8),
+  //                         size: screenWidth * 0.06,
+  //                       ),
+  //                     ),
+  //                   ],
+  //                 ),
+  //               ),
+  //             ),
+  //           ),
+  //         ),
+  //
+  //         // Filter Options
+  //         AnimatedContainer(
+  //           duration: const Duration(milliseconds: 300),
+  //           height: provider.showFilterOptions ? null : 0,
+  //           child: provider.showFilterOptions
+  //               ? Container(
+  //             margin: EdgeInsets.only(top: screenHeight * 0.01),
+  //             padding: EdgeInsets.all(screenWidth * 0.04),
+  //             decoration: BoxDecoration(
+  //               color: AppColors.whiteColor.withOpacity(0.1),
+  //               borderRadius: BorderRadius.circular(screenWidth * 0.04),
+  //               border: Border.all(
+  //                 color: AppColors.whiteColor.withOpacity(0.2),
+  //                 width: 1,
+  //               ),
+  //             ),
+  //             child: ClipRRect(
+  //               borderRadius: BorderRadius.circular(screenWidth * 0.04),
+  //               child: BackdropFilter(
+  //                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+  //                 child: Column(
+  //                   crossAxisAlignment: CrossAxisAlignment.start,
+  //                   children: [
+  //                     Row(
+  //                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //                       children: [
+  //                         Text(
+  //                           'Select Status',
+  //                           style: AppTexts.bodyTextStyle(
+  //                             context: context,
+  //                             textColor: AppColors.whiteColor,
+  //                             fontSize: AppFontSizes(context).size16,
+  //                             fontWeight: FontWeight.w600,
+  //                           ),
+  //                         ),
+  //                         GestureDetector(
+  //                           onTap: provider.resetFilters,
+  //                           child: Container(
+  //                             padding: EdgeInsets.symmetric(
+  //                               horizontal: screenWidth * 0.03,
+  //                               vertical: screenWidth * 0.01,
+  //                             ),
+  //                             decoration: BoxDecoration(
+  //                               color: AppColors.orangeColor.withOpacity(0.2),
+  //                               borderRadius: BorderRadius.circular(screenWidth * 0.03),
+  //                               border: Border.all(
+  //                                 color: AppColors.orangeColor.withOpacity(0.4),
+  //                                 width: 1,
+  //                               ),
+  //                             ),
+  //                             child: Text(
+  //                               'Reset',
+  //                               style: AppTexts.bodyTextStyle(
+  //                                 context: context,
+  //                                 textColor: AppColors.orangeColor,
+  //                                 fontSize: AppFontSizes(context).size12,
+  //                                 fontWeight: FontWeight.w500,
+  //                               ),
+  //                             ),
+  //                           ),
+  //                         ),
+  //                       ],
+  //                     ),
+  //                     SizedBox(height: screenHeight * 0.015),
+  //                     Wrap(
+  //                       spacing: screenWidth * 0.02,
+  //                       runSpacing: screenWidth * 0.02,
+  //                       children: provider.statusOptions.map((status) {
+  //                         final isSelected = provider.selectedStatuses
+  //                             .contains(status['value']);
+  //                         return GestureDetector(
+  //                           onTap: () => provider.toggleStatusFilter(status['value']!),
+  //                           child: AnimatedContainer(
+  //                             duration: const Duration(milliseconds: 200),
+  //                             padding: EdgeInsets.symmetric(
+  //                               horizontal: screenWidth * 0.03,
+  //                               vertical: screenWidth * 0.02,
+  //                             ),
+  //                             decoration: BoxDecoration(
+  //                               gradient: isSelected
+  //                                   ? LinearGradient(
+  //                                 begin: Alignment.topLeft,
+  //                                 end: Alignment.bottomRight,
+  //                                 colors: [
+  //                                   AppColors.orangeColor.withOpacity(0.8),
+  //                                   AppColors.lightOrangeColor.withOpacity(0.6),
+  //                                 ],
+  //                               )
+  //                                   : null,
+  //                               color: isSelected
+  //                                   ? null
+  //                                   : AppColors.whiteColor.withOpacity(0.1),
+  //                               borderRadius: BorderRadius.circular(screenWidth * 0.05),
+  //                               border: Border.all(
+  //                                 color: isSelected
+  //                                     ? AppColors.orangeColor.withOpacity(0.5)
+  //                                     : AppColors.whiteColor.withOpacity(0.2),
+  //                                 width: 1,
+  //                               ),
+  //                               boxShadow: isSelected
+  //                                   ? [
+  //                                 BoxShadow(
+  //                                   color: AppColors.orangeColor.withOpacity(0.3),
+  //                                   blurRadius: 8,
+  //                                   offset: const Offset(0, 4),
+  //                                 ),
+  //                               ]
+  //                                   : [],
+  //                             ),
+  //                             child: Row(
+  //                               mainAxisSize: MainAxisSize.min,
+  //                               children: [
+  //                                 AnimatedContainer(
+  //                                   duration: const Duration(milliseconds: 200),
+  //                                   width: screenWidth * 0.04,
+  //                                   height: screenWidth * 0.04,
+  //                                   decoration: BoxDecoration(
+  //                                     shape: BoxShape.circle,
+  //                                     color: isSelected
+  //                                         ? AppColors.whiteColor
+  //                                         : Colors.transparent,
+  //                                     border: Border.all(
+  //                                       color: isSelected
+  //                                           ? AppColors.whiteColor
+  //                                           : AppColors.whiteColor.withOpacity(0.5),
+  //                                       width: 2,
+  //                                     ),
+  //                                   ),
+  //                                   child: isSelected
+  //                                       ? Icon(
+  //                                     Icons.check,
+  //                                     color: AppColors.orangeColor,
+  //                                     size: screenWidth * 0.025,
+  //                                   )
+  //                                       : null,
+  //                                 ),
+  //                                 SizedBox(width: screenWidth * 0.02),
+  //                                 Text(
+  //                                   status['display']!,
+  //                                   style: AppTexts.bodyTextStyle(
+  //                                     context: context,
+  //                                     textColor: AppColors.whiteColor,
+  //                                     fontSize: AppFontSizes(context).size14,
+  //                                     fontWeight: isSelected
+  //                                         ? FontWeight.w600
+  //                                         : FontWeight.w500,
+  //                                   ),
+  //                                 ),
+  //                               ],
+  //                             ),
+  //                           ),
+  //                         );
+  //                       }).toList(),
+  //                     ),
+  //                   ],
+  //                 ),
+  //               ),
+  //             ),
+  //           )
+  //               : const SizedBox.shrink(),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
   Widget _buildLetterPlaceholder(
     double screenWidth,
     double screenHeight,
@@ -1825,15 +2422,9 @@ class _TournamentsTabState extends State<TournamentsTab> {
             AppColors.blueColor.withOpacity(0.4),
           ],
         ),
-      ),
-      child: Center(
-        child: Text(
-          title.isNotEmpty ? title[0].toUpperCase() : '',
-          style: TextStyle(
-            fontSize: screenHeight * 0.08,
-            fontWeight: FontWeight.bold,
-            color: AppColors.whiteColor.withOpacity(0.8),
-          ),
+        image: DecorationImage(
+          image: AssetImage(AppImages.placeholderTournament),
+          fit: BoxFit.cover,
         ),
       ),
     );
@@ -2015,17 +2606,16 @@ class _TournamentsTabState extends State<TournamentsTab> {
                               ),
                             ),
 
-                            SizedBox(height: screenHeight * 0.01),
+                            // SizedBox(height: screenHeight * 0.01),
 
                             // Status Badge
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: _buildStatusChip(
-                                context,
-                                tournament.status,
-                              ),
-                            ),
-
+                            // Align(
+                            //   alignment: Alignment.centerLeft,
+                            //   child: _buildStatusChip(
+                            //     context,
+                            //       tournament.status
+                            //   ),
+                            // ),
                             SizedBox(height: screenHeight * 0.02),
 
                             // Location and Organizer
@@ -2259,159 +2849,167 @@ class _TournamentsTabState extends State<TournamentsTab> {
                       ),
                     ),
 
-                    // Action Buttons
-                    Container(
-                      padding: EdgeInsets.all(screenWidth * 0.04),
-                      decoration: BoxDecoration(
-                        color: AppColors.whiteColor.withOpacity(0.05),
-                        borderRadius: BorderRadius.only(
-                          bottomLeft: Radius.circular(screenWidth * 0.06),
-                          bottomRight: Radius.circular(screenWidth * 0.06),
-                        ),
-                        border: Border(
-                          top: BorderSide(
-                            color: AppColors.whiteColor.withOpacity(0.1),
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => Navigator.pop(context),
-                              child: Container(
-                                height: screenHeight * 0.055,
-                                decoration: BoxDecoration(
-                                  color: AppColors.whiteColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(
-                                    screenWidth * 0.06,
-                                  ),
-                                  border: Border.all(
-                                    color: AppColors.whiteColor.withOpacity(
-                                      0.2,
-                                    ),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(
-                                    screenWidth * 0.06,
-                                  ),
-                                  child: BackdropFilter(
-                                    filter: ImageFilter.blur(
-                                      sigmaX: 10,
-                                      sigmaY: 10,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        'Close',
-                                        style: AppTexts.bodyTextStyle(
-                                          context: context,
-                                          textColor: AppColors.whiteColor
-                                              .withOpacity(0.8),
-                                          fontSize:
-                                              AppFontSizes(context).size16,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: screenWidth * 0.04),
-                          Expanded(
-                            flex: 2,
-                            child: GestureDetector(
-                              onTap:
-                                  isRegistrationClosed
-                                      ? null
-                                      : () {
-                                        Navigator.pop(context);
-                                        showDialog(
-                                          context: context,
-                                          builder:
-                                              (context) => RegisterTeamDialog(
-                                                tournamentId: tournament.id,
-                                                provider: provider,
-                                              ),
-                                        );
-                                      },
-                              child: Container(
-                                height: screenHeight * 0.055,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors:
-                                        isRegistrationClosed ||
-                                                tournament.registeredTeams >=
-                                                    tournament.totalTeams
-                                            ? [
-                                              AppColors.greyColor.withOpacity(
-                                                0.5,
-                                              ),
-                                              AppColors.darkGreyColor
-                                                  .withOpacity(0.3),
-                                            ]
-                                            : [
-                                              AppColors.orangeColor.withOpacity(
-                                                0.8,
-                                              ),
-                                              AppColors.lightOrangeColor
-                                                  .withOpacity(0.6),
-                                            ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(
-                                    screenWidth * 0.06,
-                                  ),
-                                  boxShadow:
-                                      isRegistrationClosed ||
-                                              tournament.registeredTeams >=
-                                                  tournament.totalTeams
-                                          ? []
-                                          : [
-                                            BoxShadow(
-                                              color: AppColors.orangeColor
-                                                  .withOpacity(0.3),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 4),
-                                            ),
-                                          ],
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(
-                                    screenWidth * 0.06,
-                                  ),
-                                  child: BackdropFilter(
-                                    filter: ImageFilter.blur(
-                                      sigmaX: 10,
-                                      sigmaY: 10,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        isRegistrationClosed
-                                            ? 'Registration Closed'
-                                            : 'Register Team',
-                                        style: AppTexts.bodyTextStyle(
-                                          context: context,
-                                          textColor: AppColors.whiteColor,
-                                          fontSize:
-                                              AppFontSizes(context).size16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    // // Action Buttons
+                    // Container(
+                    //   padding: EdgeInsets.all(screenWidth * 0.04),
+                    //   decoration: BoxDecoration(
+                    //     color: AppColors.whiteColor.withOpacity(0.05),
+                    //     borderRadius: BorderRadius.only(
+                    //       bottomLeft: Radius.circular(screenWidth * 0.06),
+                    //       bottomRight: Radius.circular(screenWidth * 0.06),
+                    //     ),
+                    //     border: Border(
+                    //       top: BorderSide(
+                    //         color: AppColors.whiteColor.withOpacity(0.1),
+                    //         width: 1,
+                    //       ),
+                    //     ),
+                    //   ),
+                    //   child: Row(
+                    //     children: [
+                    //       Expanded(
+                    //         child: GestureDetector(
+                    //           onTap: () => Navigator.pop(context),
+                    //           child: Container(
+                    //             height: screenHeight * 0.055,
+                    //             decoration: BoxDecoration(
+                    //               color: AppColors.whiteColor.withOpacity(0.1),
+                    //               borderRadius: BorderRadius.circular(
+                    //                 screenWidth * 0.06,
+                    //               ),
+                    //               border: Border.all(
+                    //                 color: AppColors.whiteColor.withOpacity(
+                    //                   0.2,
+                    //                 ),
+                    //                 width: 1,
+                    //               ),
+                    //             ),
+                    //             child: ClipRRect(
+                    //               borderRadius: BorderRadius.circular(
+                    //                 screenWidth * 0.06,
+                    //               ),
+                    //               child: BackdropFilter(
+                    //                 filter: ImageFilter.blur(
+                    //                   sigmaX: 10,
+                    //                   sigmaY: 10,
+                    //                 ),
+                    //                 child: Center(
+                    //                   child: Text(
+                    //                     'Close',
+                    //                     style: AppTexts.bodyTextStyle(
+                    //                       context: context,
+                    //                       textColor: AppColors.whiteColor
+                    //                           .withOpacity(0.8),
+                    //                       fontSize:
+                    //                           AppFontSizes(context).size16,
+                    //                       fontWeight: FontWeight.w500,
+                    //                     ),
+                    //                   ),
+                    //                 ),
+                    //               ),
+                    //             ),
+                    //           ),
+                    //         ),
+                    //       ),
+                    //       SizedBox(width: screenWidth * 0.04),
+                    //       Consumer<NavigationProvider>(
+                    //         builder: (
+                    //           BuildContext context,
+                    //           NavigationProvider navProvider,
+                    //           Widget? child,
+                    //         ) {
+                    //           return Expanded(
+                    //             flex: 2,
+                    //             child: GestureDetector(
+                    //               onTap:
+                    //                   isRegistrationClosed
+                    //                       ? null
+                    //                       : () {
+                    //                         // Navigator.pop(context);
+                    //                         // showDialog(
+                    //                         //   context: context,
+                    //                         //   builder:
+                    //                         //       (context) => RegisterTeamDialog(
+                    //                         //         tournamentId: tournament.id,
+                    //                         //         provider: provider,
+                    //                         //       ),
+                    //                         // );
+                    //                         navProvider.goToTab(context, 1);
+                    //                       },
+                    //               child: Container(
+                    //                 height: screenHeight * 0.055,
+                    //                 decoration: BoxDecoration(
+                    //                   gradient: LinearGradient(
+                    //                     begin: Alignment.topLeft,
+                    //                     end: Alignment.bottomRight,
+                    //                     colors:
+                    //                         isRegistrationClosed ||
+                    //                                 tournament
+                    //                                         .registeredTeams >=
+                    //                                     tournament.totalTeams
+                    //                             ? [
+                    //                               AppColors.greyColor
+                    //                                   .withOpacity(0.5),
+                    //                               AppColors.darkGreyColor
+                    //                                   .withOpacity(0.3),
+                    //                             ]
+                    //                             : [
+                    //                               AppColors.orangeColor
+                    //                                   .withOpacity(0.8),
+                    //                               AppColors.lightOrangeColor
+                    //                                   .withOpacity(0.6),
+                    //                             ],
+                    //                   ),
+                    //                   borderRadius: BorderRadius.circular(
+                    //                     screenWidth * 0.06,
+                    //                   ),
+                    //                   boxShadow:
+                    //                       isRegistrationClosed ||
+                    //                               tournament.registeredTeams >=
+                    //                                   tournament.totalTeams
+                    //                           ? []
+                    //                           : [
+                    //                             BoxShadow(
+                    //                               color: AppColors.orangeColor
+                    //                                   .withOpacity(0.3),
+                    //                               blurRadius: 8,
+                    //                               offset: const Offset(0, 4),
+                    //                             ),
+                    //                           ],
+                    //                 ),
+                    //                 child: ClipRRect(
+                    //                   borderRadius: BorderRadius.circular(
+                    //                     screenWidth * 0.06,
+                    //                   ),
+                    //                   child: BackdropFilter(
+                    //                     filter: ImageFilter.blur(
+                    //                       sigmaX: 10,
+                    //                       sigmaY: 10,
+                    //                     ),
+                    //                     child: Center(
+                    //                       child: Text(
+                    //                         isRegistrationClosed
+                    //                             ? 'Registration Closed'
+                    //                             : 'Register Team',
+                    //                         style: AppTexts.bodyTextStyle(
+                    //                           context: context,
+                    //                           textColor: AppColors.whiteColor,
+                    //                           fontSize:
+                    //                               AppFontSizes(context).size16,
+                    //                           fontWeight: FontWeight.w600,
+                    //                         ),
+                    //                       ),
+                    //                     ),
+                    //                   ),
+                    //                 ),
+                    //               ),
+                    //             ),
+                    //           );
+                    //         },
+                    //       ),
+                    //     ],
+                    //   ),
+                    // ),
                   ],
                 ),
               ),
@@ -2420,5 +3018,26 @@ class _TournamentsTabState extends State<TournamentsTab> {
         );
       },
     );
+  }
+}
+
+extension TournamentStatusParsing on String {
+  TournamentStatus toTournamentStatus() {
+    switch (toLowerCase()) {
+      case 'approved':
+        return TournamentStatus.approved;
+      case 'under review':
+        return TournamentStatus.underReview;
+      case 'rejected':
+        return TournamentStatus.rejected;
+      case 'ongoing':
+        return TournamentStatus.ongoing;
+      case 'completed':
+        return TournamentStatus.completed;
+      case 'cancelled':
+        return TournamentStatus.cancelled;
+      default:
+        return TournamentStatus.underReview;
+    }
   }
 }

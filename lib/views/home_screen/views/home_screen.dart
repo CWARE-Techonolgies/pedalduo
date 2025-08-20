@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -5,15 +7,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pedalduo/global/images.dart';
 import 'package:pedalduo/models/user_model.dart';
 import 'package:provider/provider.dart';
+import '../../../chat/chat_room_provider.dart';
 import '../../../chat/chat_rooms_screen.dart';
 import '../../../providers/navigation_provider.dart';
+import '../../../providers/notification_provider.dart';
 import '../../../services/shared_preference_service.dart';
 import '../../../style/colors.dart';
 import '../../../style/fonts_sizes.dart';
 import '../../profile/profile_screen.dart';
 import '../../profile/update_profile_scren.dart';
-import 'activity_screen.dart';
-import 'clubs_screen.dart';
+import 'create_team_screen.dart';
+import 'courts_screen.dart';
 import 'discovery/views/discovery_screen.dart';
 import 'highlighst_screen.dart';
 
@@ -30,7 +34,21 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    loadUser();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ChatRoomsProvider>().fetchChatRooms();
+      loadUser();
+      context.read<NotificationProvider>().registerFCMToken();
+
+      // Call silentRefresh periodically every 2 seconds
+      Timer.periodic(const Duration(milliseconds: 2000), (timer) {
+        if (mounted) {
+          context.read<ChatRoomsProvider>().silentRefresh();
+        } else {
+          timer.cancel(); // Cancel timer if widget is disposed
+        }
+      });
+    });
   }
 
   Future<void> loadUser() async {
@@ -39,7 +57,14 @@ class _HomeScreenState extends State<HomeScreen> {
       _user = user;
     });
   }
-
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null && route.isCurrent) {
+      loadUser();
+    }
+  }
   @override
   Widget build(BuildContext context) {
     final Size screenSize = MediaQuery.of(context).size;
@@ -59,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Image(
-                    image: AssetImage(AppImages.logoImage),
+                    image: AssetImage(AppImages.logoImage2),
                     width: 25,
                   ),
                 ),
@@ -96,31 +121,76 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 },
-                child: Container(
-                  width: screenWidth * 0.08,
-                  height: screenWidth * 0.08,
-                  decoration: BoxDecoration(
-                    color: AppColors.orangeColor,
-                    borderRadius: BorderRadius.circular(screenWidth * 0.015),
-                  ),
-                  child: Icon(
-                    CupertinoIcons.bubble_left_bubble_right_fill,
-                    color: AppColors.whiteColor,
-                    size: screenWidth * 0.05,
-                  ),
+                child: Consumer<ChatRoomsProvider>(
+                  builder: (context, chatProvider, child) {
+                    final unreadCount = chatProvider.totalUnreadMessages;
+                    return Stack(
+                      alignment: Alignment.topRight,
+                      children: [
+                        Container(
+                          width: screenWidth * 0.1,
+                          height: screenWidth * 0.1,
+                          decoration: BoxDecoration(
+                            color: AppColors.orangeColor,
+                            borderRadius: BorderRadius.circular(screenWidth * 0.015),
+                          ),
+                          child: Icon(
+                            CupertinoIcons.bubble_left_bubble_right_fill,
+                            color: AppColors.whiteColor,
+                            size: screenWidth * 0.05,
+                          ),
+                        ),
+                        if (unreadCount > 0)
+                          Positioned(
+                            top: -0.5,
+                            child: Container(
+                              padding: EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: AppColors.navyBlueGrey,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  unreadCount > 99 ? '9+' : unreadCount.toString(),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 16),
+// Replace the existing profile navigation InkWell in actions
               InkWell(
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  // Navigate to profile update and refresh user data when returning
+                  await Navigator.push(
                     context,
                     CupertinoPageRoute(
                       builder: (_) => UserProfileUpdateScreen(),
                     ),
                   );
+                  // Refresh user data after returning from profile update
+                  loadUser();
                 },
-                child: CircleAvatar(
+                child: (_user?.imageUrl != null && _user!.imageUrl!.isNotEmpty)
+                    ? CircleAvatar(
+                  backgroundImage: MemoryImage(
+                    base64Decode(_extractBase64(_user!.imageUrl!)),
+                  ),
+                )
+                    : CircleAvatar(
                   backgroundColor: AppColors.orangeColor,
                   child: Text(
                     _getInitials(_user?.name ?? 'P'),
@@ -155,11 +225,11 @@ class _HomeScreenState extends State<HomeScreen> {
       case 0:
         return const HighlightsScreen();
       case 1:
-        return const ActivityScreen();
+        return const CreateTeamScreen();
       case 2:
         return const DiscoveryScreen();
       case 3:
-        return const ClubsScreen();
+        return const CourtsScreen();
       case 4:
         return const ProfileScreen();
       default:
@@ -204,19 +274,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 label: 'Highlights',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.notifications),
-                label: 'Activity',
+                icon: Icon(CupertinoIcons.person_3_fill),
+                label: 'Teams',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.explore),
                 label: 'Discover',
               ),
-              BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Clubs'),
+              BottomNavigationBarItem(icon: Icon(Icons.sports_score_outlined), label: 'Courts'),
               BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Me'),
             ],
           ),
         ),
       ),
     );
+  }String _extractBase64(String dataUrl) {
+    if (dataUrl.contains(',')) {
+      return dataUrl.split(',').last;
+    }
+    return dataUrl;
   }
 }

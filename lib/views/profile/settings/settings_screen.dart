@@ -1,16 +1,26 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:ui';
 
+import '../../../global/constants.dart';
 import '../../../style/colors.dart';
 import '../../../style/fonts_sizes.dart';
 import '../../../style/texts.dart';
+import '../../../utils/app_utils.dart';
 import '../../../widgets/logout_dialogue.dart';
+import '../../auth/change_password.dart';
+import '../customer_support/support_ticket_main_screen.dart';
 import 'notification_settings_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -34,7 +44,10 @@ class SettingsScreen extends StatelessWidget {
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.glassColor,
                         borderRadius: BorderRadius.circular(16),
@@ -46,7 +59,10 @@ class SettingsScreen extends StatelessWidget {
                       child: Row(
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimaryColor),
+                            icon: const Icon(
+                              Icons.arrow_back,
+                              color: AppColors.textPrimaryColor,
+                            ),
                             onPressed: () => Navigator.pop(context),
                           ),
                           Expanded(
@@ -98,8 +114,8 @@ class SettingsScreen extends StatelessWidget {
                             context,
                             'Manage Notifications',
                             Icons.notifications_outlined,
-                            AppColors.accentBlueColor,
-                                () {
+                            AppColors.goldColor,
+                            () {
                               Navigator.push(
                                 context,
                                 CupertinoPageRoute(
@@ -114,15 +130,50 @@ class SettingsScreen extends StatelessWidget {
                             'Manage Payment',
                             Icons.payment_outlined,
                             AppColors.primaryColor,
-                                () {},
+                            () {
+                              AppUtils.showInfoDialog(
+                                context,
+                                'Coming Soon', // title
+                                'This feature is coming soon.', // message
+                                buttonText: 'Got It',
+                              );
+                            },
                           ),
 
                           _buildSettingsItem(
                             context,
-                            'Contact Us',
-                            Icons.email_outlined,
+                            'Customer Support',
+                            Icons.support_agent_outlined,
                             AppColors.accentCyanColor,
-                                () {},
+                            () {
+                              Navigator.push(
+                                context,
+                                CupertinoPageRoute(
+                                  builder: (_) => SupportTicketScreen(),
+                                ),
+                              );
+                            },
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Security Section
+                          _buildSectionHeader(context, 'Security'),
+                          const SizedBox(height: 12),
+
+                          _buildSettingsItem(
+                            context,
+                            'Change Password',
+                            Icons.lock_outline,
+                            AppColors.lightOrangeColor,
+                            () {
+                              Navigator.push(
+                                context,
+                                CupertinoPageRoute(
+                                  builder: (_) => const ChangePasswordScreen(),
+                                ),
+                              );
+                            },
                           ),
 
                           const SizedBox(height: 24),
@@ -135,8 +186,8 @@ class SettingsScreen extends StatelessWidget {
                             context,
                             'Privacy Policy',
                             Icons.privacy_tip_outlined,
-                            AppColors.accentPurpleColor,
-                                () {},
+                            AppColors.backgroundColor,
+                            _launchPrivacyPolicy,
                           ),
 
                           _buildSettingsItem(
@@ -144,7 +195,7 @@ class SettingsScreen extends StatelessWidget {
                             'Terms of Service',
                             Icons.description_outlined,
                             AppColors.warningColor,
-                                () {},
+                            _launchTermsAndConditions,
                           ),
 
                           const SizedBox(height: 24),
@@ -158,7 +209,7 @@ class SettingsScreen extends StatelessWidget {
                             'Logout',
                             Icons.logout_outlined,
                             AppColors.errorColor,
-                                () {
+                            () {
                               LogoutDialog.show(context);
                             },
                             isDangerous: true,
@@ -169,7 +220,7 @@ class SettingsScreen extends StatelessWidget {
                             'Delete Account',
                             Icons.delete_outline,
                             AppColors.errorColor,
-                                () {},
+                            _launchDeleteAccountRequest,
                             isDangerous: true,
                           ),
 
@@ -204,13 +255,13 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Widget _buildSettingsItem(
-      BuildContext context,
-      String title,
-      IconData icon,
-      Color iconColor,
-      VoidCallback onTap, {
-        bool isDangerous = false,
-      }) {
+    BuildContext context,
+    String title,
+    IconData icon,
+    Color iconColor,
+    VoidCallback onTap, {
+    bool isDangerous = false,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: ClipRRect(
@@ -219,14 +270,16 @@ class SettingsScreen extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
           child: Container(
             decoration: BoxDecoration(
-              color: isDangerous
-                  ? AppColors.errorColor.withOpacity(0.1)
-                  : AppColors.glassLightColor,
+              color:
+                  isDangerous
+                      ? AppColors.errorColor.withOpacity(0.1)
+                      : AppColors.glassLightColor,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isDangerous
-                    ? AppColors.errorColor.withOpacity(0.3)
-                    : AppColors.glassBorderColor,
+                color:
+                    isDangerous
+                        ? AppColors.errorColor.withOpacity(0.3)
+                        : AppColors.glassBorderColor,
                 width: 1,
               ),
             ),
@@ -236,7 +289,10 @@ class SettingsScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 onTap: onTap,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                   child: Row(
                     children: [
                       Container(
@@ -249,11 +305,7 @@ class SettingsScreen extends StatelessWidget {
                             width: 1,
                           ),
                         ),
-                        child: Icon(
-                          icon,
-                          color: iconColor,
-                          size: 20,
-                        ),
+                        child: Icon(icon, color: iconColor, size: 20),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -261,15 +313,16 @@ class SettingsScreen extends StatelessWidget {
                           title,
                           style: AppTexts.bodyTextStyle(
                             context: context,
-                            textColor: isDangerous
-                                ? AppColors.errorColor
-                                : AppColors.textPrimaryColor,
-                            fontSize: isDangerous
-                                ? AppFontSizes(context).size16
-                                : AppFontSizes(context).size14,
-                            fontWeight: isDangerous
-                                ? FontWeight.w600
-                                : FontWeight.w500,
+                            textColor:
+                                isDangerous
+                                    ? AppColors.errorColor
+                                    : AppColors.textPrimaryColor,
+                            fontSize:
+                                isDangerous
+                                    ? AppFontSizes(context).size16
+                                    : AppFontSizes(context).size14,
+                            fontWeight:
+                                isDangerous ? FontWeight.w600 : FontWeight.w500,
                           ),
                         ),
                       ),
@@ -298,5 +351,41 @@ class SettingsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _launchTermsAndConditions() async {
+    const url = AppConstants.termsAndConditions;
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        AppUtils.showFailureSnackBar(
+          context,
+          'Could not open Terms & Conditions',
+        );
+      }
+    }
+  }
+
+  Future<void> _launchPrivacyPolicy() async {
+    const url = AppConstants.privacyPolicy;
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        AppUtils.showFailureSnackBar(context, 'Could not open Privacy Policy');
+      }
+    }
+  }
+
+  Future<void> _launchDeleteAccountRequest() async {
+    const url = AppConstants.deleteAccountRequest;
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        AppUtils.showFailureSnackBar(context, 'Could not open Privacy Policy');
+      }
+    }
   }
 }

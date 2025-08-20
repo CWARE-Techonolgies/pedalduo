@@ -481,17 +481,7 @@ class _TeamCardWidgetState extends State<TeamCardWidget> {
                               'Completed') ...[
                             Row(
                               children: [
-                                Expanded(
-                                  child: _buildActionButton(
-                                    context,
-                                    'Add Players',
-                                    Icons.person_add,
-                                    AppColors.accentBlueColor,
-                                    () => _navigateToAddPlayers(context),
-                                    screenWidth,
-                                    screenHeight,
-                                  ),
-                                ),
+
                                 SizedBox(width: screenWidth * 0.04),
                                 Expanded(
                                   child: _buildActionButton(
@@ -713,7 +703,7 @@ class _TeamCardWidgetState extends State<TeamCardWidget> {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: _isProcessing ? null : () => _processPayment(''),
+              onTap: _isProcessing ? null : () => _processPayment(),
               borderRadius: BorderRadius.circular(screenWidth * 0.04),
               splashColor: AppColors.successColor.withOpacity(0.2),
               child: Container(
@@ -742,7 +732,8 @@ class _TeamCardWidgetState extends State<TeamCardWidget> {
                             ),
                             SizedBox(width: screenWidth * 0.03),
                             Text(
-                              'Pay Now',
+                              // 'Pay Now',
+                              'Confirm',
                               style: AppTexts.emphasizedTextStyle(
                                 context: context,
                                 textColor: AppColors.textPrimaryColor,
@@ -1031,7 +1022,7 @@ class _TeamCardWidgetState extends State<TeamCardWidget> {
                             onPressed: () {
                               if (phoneController.text.isNotEmpty) {
                                 Navigator.of(context).pop();
-                                _processPayment(phoneController.text);
+                                _processPayment();
                               }
                             },
                             style: ElevatedButton.styleFrom(
@@ -1051,7 +1042,8 @@ class _TeamCardWidgetState extends State<TeamCardWidget> {
                               ),
                             ),
                             child: Text(
-                              'Pay Now',
+                              // 'Pay Now',
+                              'Confirm',
                               style: AppTexts.emphasizedTextStyle(
                                 context: context,
                                 textColor: AppColors.textPrimaryColor,
@@ -1282,7 +1274,7 @@ class _TeamCardWidgetState extends State<TeamCardWidget> {
     );
   }
 
-  Future<void> _processPayment(String phoneNumber) async {
+  Future<void> _processPayment() async {
     setState(() {
       _isProcessing = true;
     });
@@ -1304,7 +1296,8 @@ class _TeamCardWidgetState extends State<TeamCardWidget> {
       );
 
       if (response.statusCode == 200) {
-        _showSuccessMessage('Payment processed successfully!');
+        // _showSuccessMessage('Payment processed successfully!');
+        print('wow done');
         WidgetsBinding.instance.addPostFrameCallback((_) {
           context.read<TeamProvider>().fetchTeams();
         });

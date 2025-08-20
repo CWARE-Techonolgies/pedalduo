@@ -1009,15 +1009,14 @@ class _PasswordResetSuccessDialogState extends State<PasswordResetSuccessDialog>
 
                           // Success title
                           Text(
-                            'Password Reset\nSuccessful!',
-                            textAlign: TextAlign.center,
+                            'Password Reset\nSuccessful!', textAlign: TextAlign.center,
                             style: AppTexts.headingStyle(
                               context: context,
                               textColor: AppColors.whiteColor,
                               fontSize: width * 0.06,
                             ),
                           ),
-
+ //////
                           SizedBox(height: width * 0.03),
 
                           // Success message

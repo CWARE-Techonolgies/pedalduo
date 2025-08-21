@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pedalduo/global/images.dart';
 import 'package:pedalduo/models/user_model.dart';
+import 'package:pedalduo/views/notification_management/notification_screen.dart';
 import 'package:provider/provider.dart';
 import '../../../chat/chat_room_provider.dart';
 import '../../../chat/chat_rooms_screen.dart';
@@ -14,6 +15,7 @@ import '../../../providers/notification_provider.dart';
 import '../../../services/shared_preference_service.dart';
 import '../../../style/colors.dart';
 import '../../../style/fonts_sizes.dart';
+import '../../notification_management/manage_notification_provider.dart';
 import '../../profile/profile_screen.dart';
 import '../../profile/update_profile_scren.dart';
 import 'create_team_screen.dart';
@@ -39,11 +41,13 @@ class _HomeScreenState extends State<HomeScreen> {
       context.read<ChatRoomsProvider>().fetchChatRooms();
       loadUser();
       context.read<NotificationProvider>().registerFCMToken();
+      context.read<ManageNotificationProvider>().loadNotifications();
 
       // Call silentRefresh periodically every 2 seconds
       Timer.periodic(const Duration(milliseconds: 2000), (timer) {
         if (mounted) {
           context.read<ChatRoomsProvider>().silentRefresh();
+
         } else {
           timer.cancel(); // Cancel timer if widget is disposed
         }
@@ -57,6 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _user = user;
     });
   }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -65,6 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
       loadUser();
     }
   }
+
   @override
   Widget build(BuildContext context) {
     final Size screenSize = MediaQuery.of(context).size;
@@ -74,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return Scaffold(
           backgroundColor: AppColors.navyBlueGrey,
           appBar: AppBar(
+            automaticallyImplyLeading: false,
             backgroundColor: AppColors.navyBlueGrey,
             title: Row(
               children: [
@@ -132,7 +139,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           height: screenWidth * 0.1,
                           decoration: BoxDecoration(
                             color: AppColors.orangeColor,
-                            borderRadius: BorderRadius.circular(screenWidth * 0.015),
+                            borderRadius: BorderRadius.circular(
+                              screenWidth * 0.015,
+                            ),
                           ),
                           child: Icon(
                             CupertinoIcons.bubble_left_bubble_right_fill,
@@ -155,7 +164,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               child: Center(
                                 child: Text(
-                                  unreadCount > 99 ? '9+' : unreadCount.toString(),
+                                  unreadCount > 99
+                                      ? '9+'
+                                      : unreadCount.toString(),
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 10,
@@ -171,34 +182,66 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(width: 16),
-// Replace the existing profile navigation InkWell in actions
               InkWell(
-                onTap: () async {
-                  // Navigate to profile update and refresh user data when returning
-                  await Navigator.push(
+                onTap: () {
+                  Navigator.push(
                     context,
                     CupertinoPageRoute(
-                      builder: (_) => UserProfileUpdateScreen(),
+                      builder: (_) => NotificationScreen(),
                     ),
                   );
-                  // Refresh user data after returning from profile update
-                  loadUser();
                 },
-                child: (_user?.imageUrl != null && _user!.imageUrl!.isNotEmpty)
-                    ? CircleAvatar(
-                  backgroundImage: MemoryImage(
-                    base64Decode(_extractBase64(_user!.imageUrl!)),
-                  ),
-                )
-                    : CircleAvatar(
-                  backgroundColor: AppColors.orangeColor,
-                  child: Text(
-                    _getInitials(_user?.name ?? 'P'),
-                    style: GoogleFonts.barlow(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.whiteColor,
-                    ),
-                  ),
+                child: Consumer<ManageNotificationProvider>(
+                  builder: (context, provider, child) {
+                    final unreadCount = provider.unreadCount;
+                    return Stack(
+                      alignment: Alignment.topRight,
+                      children: [
+                        Container(
+                          width: screenWidth * 0.1,
+                          height: screenWidth * 0.1,
+                          decoration: BoxDecoration(
+                            color: AppColors.orangeColor,
+                            borderRadius: BorderRadius.circular(
+                              screenWidth * 0.015,
+                            ),
+                          ),
+                          child: Icon(
+                            CupertinoIcons.bell_fill,
+                            color: AppColors.whiteColor,
+                            size: screenWidth * 0.05,
+                          ),
+                        ),
+                        if (unreadCount > 0)
+                          Positioned(
+                            top: -0.5,
+                            child: Container(
+                              padding: EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: AppColors.navyBlueGrey,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  unreadCount > 99
+                                      ? '9+'
+                                      : unreadCount.toString(),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 16),
@@ -281,14 +324,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icon(Icons.explore),
                 label: 'Discover',
               ),
-              BottomNavigationBarItem(icon: Icon(Icons.sports_score_outlined), label: 'Courts'),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.sports_score_outlined),
+                label: 'Courts',
+              ),
               BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Me'),
             ],
           ),
         ),
       ),
     );
-  }String _extractBase64(String dataUrl) {
+  }
+
+  String _extractBase64(String dataUrl) {
     if (dataUrl.contains(',')) {
       return dataUrl.split(',').last;
     }

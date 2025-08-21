@@ -9,18 +9,16 @@ import '../models/club_team_member_model.dart';
 import '../services/create_team_api_services.dart';
 
 class CreateTeamProvider extends ChangeNotifier {
-  static const String baseUrl = AppApis.baseUrl;
-
   // API Endpoints
-  static const String createClubTeam = "${baseUrl}club-teams";
-  static const String userClubTeam = "${baseUrl}club-teams/my-team";
-  static const String publicTeamsTeam = "${baseUrl}club-teams/public-teams";
-  static const String getClubTeamById = "${baseUrl}club-teams";
-  static const String joinPublicTeam = "${baseUrl}club-teams";
-  static const String transferCaptaincy = "${baseUrl}club-teams";
-  static const String teamPrivacyUpdate = "${baseUrl}club-teams";
-  static const String removeMemberFromTeam = "${baseUrl}club-teams";
-  static const String leaveClubTeam = "${baseUrl}club-teams";
+  static String createClubTeam = "${AppApis.baseUrl}club-teams";
+  static String userClubTeam = "${AppApis.baseUrl}club-teams/my-team";
+  static String publicTeamsTeam = "${AppApis.baseUrl}club-teams/public-teams";
+  static String getClubTeamById = "${AppApis.baseUrl}club-teams";
+  static String joinPublicTeam = "${AppApis.baseUrl}club-teams";
+  static String transferCaptaincy = "${AppApis.baseUrl}club-teams";
+  static String teamPrivacyUpdate = "${AppApis.baseUrl}club-teams";
+  static String removeMemberFromTeam = "${AppApis.baseUrl}club-teams";
+  static String leaveClubTeam = "${AppApis.baseUrl}club-teams";
 
   // State variables
   ClubTeam? _myTeam;
@@ -586,7 +584,7 @@ class CreateTeamProvider extends ChangeNotifier {
     try {
       final token = await _getAuthToken();
       final response = await http.delete(
-        Uri.parse('${baseUrl}teams/$teamId/withdraw'),
+        Uri.parse('${AppApis.baseUrl}teams/$teamId/withdraw'),
         headers: _getHeaders(token),
       );
 

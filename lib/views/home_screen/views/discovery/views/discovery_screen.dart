@@ -88,7 +88,9 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      CupertinoPageRoute(builder: (_) => PlayScreen()),
+                      CupertinoPageRoute(
+                        builder: (_) => PlayScreen(initialTabIndex: 0),
+                      ),
                     );
                   },
                 ),
@@ -98,7 +100,8 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
               Expanded(
                 child: Consumer<InvitationsProvider>(
                   builder: (context, invitationsProvider, child) {
-                    final totalInvitations = invitationsProvider.pendingReceivedCount;
+                    final totalInvitations =
+                        invitationsProvider.pendingReceivedCount;
 
                     return _buildGlassCardWithBadge(
                       title: 'Invitations',
@@ -108,7 +111,9 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          CupertinoPageRoute(builder: (_) => InvitationsScreen()),
+                          CupertinoPageRoute(
+                            builder: (_) => InvitationsScreen(),
+                          ),
                         );
                       },
                     );
@@ -121,7 +126,11 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
           Row(
             children: [
               Consumer<NavigationProvider>(
-                builder: (BuildContext context, NavigationProvider navProvider, Widget? child) {
+                builder: (
+                  BuildContext context,
+                  NavigationProvider navProvider,
+                  Widget? child,
+                ) {
                   return Expanded(
                     child: _buildGlassCard(
                       title: 'Top Feed',
@@ -278,13 +287,12 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                       color: AppColors.whiteColor,
                     ),
                   ),
-                  if (badgeCount > 0)...[
-                    SizedBox(width: 10,),
+                  if (badgeCount > 0) ...[
+                    SizedBox(width: 10),
                     Container(
                       decoration: BoxDecoration(
-                          color: AppColors.backgroundColor,
+                        color: AppColors.backgroundColor,
                         shape: BoxShape.circle,
-
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
@@ -298,8 +306,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                         ),
                       ),
                     ),
-                  ]
-
+                  ],
                 ],
               ),
             ),
@@ -419,31 +426,33 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
   }
 
   Widget _buildUpcomingMatchesList(
-      BuildContext context,
-      List<MyMatchesModel> matches,
-      ) {
+    BuildContext context,
+    List<MyMatchesModel> matches,
+  ) {
     if (matches.isEmpty) {
       return const SizedBox.shrink();
     }
 
     return SizedBox(
-      height: MediaQuery.sizeOf(context).height *.23,
-      child: matches.length == 1
-          ? Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: _buildUpcomingMatchCard(context, matches.first),
-      )
-          : ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: matches.length,
-        itemBuilder: (context, index) {
-          final match = matches[index];
-          return _buildUpcomingMatchCard(context, match);
-        },
-      ),
+      height: MediaQuery.sizeOf(context).height * .23,
+      child:
+          matches.length == 1
+              ? Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _buildUpcomingMatchCard(context, matches.first),
+              )
+              : ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: matches.length,
+                itemBuilder: (context, index) {
+                  final match = matches[index];
+                  return _buildUpcomingMatchCard(context, match);
+                },
+              ),
     );
   }
+
   Widget _buildUpcomingMatchCard(BuildContext context, MyMatchesModel match) {
     return Container(
       decoration: BoxDecoration(
@@ -626,7 +635,6 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                     ),
                   ],
                 ),
-
               ],
             ),
           ),

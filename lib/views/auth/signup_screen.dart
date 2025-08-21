@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:pedalduo/global/apis.dart';
 import 'package:pedalduo/global/constants.dart';
 import 'package:pedalduo/utils/app_utils.dart';
 import 'package:pedalduo/views/auth/login_screen.dart';
@@ -349,18 +350,21 @@ class _SignupScreenState extends State<SignupScreen>
                                       if (authProvider.showPhoneOtp)
                                         Column(
                                           children: [
-                                            SizedBox(height: height * 0.01),
-                                            Text(
-                                              'As the application is currently in the Testing Mode, Use 123456 as your OTP',
-                                              style:
-                                                  AppTexts.emphasizedTextStyle(
-                                                    context: context,
-                                                    textColor: AppColors
-                                                        .whiteColor
-                                                        .withOpacity(0.8),
-                                                    fontSize: width * 0.038,
-                                                  ),
-                                            ),
+                                            if (!AppApis.isProduction) ...[
+                                              SizedBox(height: height * 0.01),
+                                              Text(
+                                                'As the application is currently in the Testing Mode, Use 123456 as your OTP',
+                                                style:
+                                                    AppTexts.emphasizedTextStyle(
+                                                      context: context,
+                                                      textColor: AppColors
+                                                          .whiteColor
+                                                          .withOpacity(0.8),
+                                                      fontSize: width * 0.038,
+                                                    ),
+                                              ),
+                                            ],
+
                                             SizedBox(height: height * 0.02),
                                             _buildOtpField(
                                               controller:
@@ -815,7 +819,7 @@ class _SignupScreenState extends State<SignupScreen>
 
   // Handle email verification
   Future<void> _handleEmailVerification(UserAuthProvider authProvider) async {
-    bool success = await authProvider.sendEmailOtp();
+    bool success = await authProvider.sendEmailOtp(context);
     if (success) {
       AppUtils.showSuccessSnackBar(
         context,
@@ -828,7 +832,7 @@ class _SignupScreenState extends State<SignupScreen>
   Future<void> _handleEmailOtpVerification(
     UserAuthProvider authProvider,
   ) async {
-    bool success = await authProvider.verifyEmailOtp();
+    bool success = await authProvider.verifyEmailOtp(context);
     if (success) {
       AppUtils.showSuccessSnackBar(context, 'Email verified successfully!');
     }
@@ -849,7 +853,7 @@ class _SignupScreenState extends State<SignupScreen>
   Future<void> _handlePhoneOtpVerification(
     UserAuthProvider authProvider,
   ) async {
-    bool success = await authProvider.verifyPhoneOtp();
+    bool success = await authProvider.verifyPhoneOtp(context);
     if (success) {
       AppUtils.showSuccessSnackBar(
         context,
@@ -875,13 +879,15 @@ class _SignupScreenState extends State<SignupScreen>
     bool enabled = true,
   }) {
     // Determine if this is email or phone field
-    bool canResend = fieldType == 'email'
-        ? authProvider.canResendEmailOtp
-        : authProvider.canResendPhoneOtp;
+    bool canResend =
+        fieldType == 'email'
+            ? authProvider.canResendEmailOtp
+            : authProvider.canResendPhoneOtp;
 
-    int countdown = fieldType == 'email'
-        ? authProvider.emailOtpCountdown
-        : authProvider.phoneOtpCountdown;
+    int countdown =
+        fieldType == 'email'
+            ? authProvider.emailOtpCountdown
+            : authProvider.phoneOtpCountdown;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -906,11 +912,12 @@ class _SignupScreenState extends State<SignupScreen>
                   color: AppColors.whiteColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(width * 0.04),
                   border: Border.all(
-                    color: isVerified
-                        ? AppColors.greenColor.withOpacity(0.8)
-                        : isValid
-                        ? AppColors.whiteColor.withOpacity(0.3)
-                        : AppColors.redColor.withOpacity(0.6),
+                    color:
+                        isVerified
+                            ? AppColors.greenColor.withOpacity(0.8)
+                            : isValid
+                            ? AppColors.whiteColor.withOpacity(0.3)
+                            : AppColors.redColor.withOpacity(0.6),
                     width: 1.5,
                   ),
                 ),
@@ -921,9 +928,10 @@ class _SignupScreenState extends State<SignupScreen>
                   enabled: enabled,
                   style: AppTexts.bodyTextStyle(
                     context: context,
-                    textColor: enabled
-                        ? AppColors.whiteColor
-                        : AppColors.whiteColor.withOpacity(0.6),
+                    textColor:
+                        enabled
+                            ? AppColors.whiteColor
+                            : AppColors.whiteColor.withOpacity(0.6),
                     fontSize: width * 0.04,
                   ),
                   decoration: InputDecoration(
@@ -935,65 +943,81 @@ class _SignupScreenState extends State<SignupScreen>
                     ),
                     prefixIcon: Icon(
                       isVerified ? Icons.verified : icon,
-                      color: isVerified
-                          ? AppColors.greenColor
-                          : AppColors.orangeColor.withOpacity(0.8),
+                      color:
+                          isVerified
+                              ? AppColors.greenColor
+                              : AppColors.orangeColor.withOpacity(0.8),
                       size: width * 0.06,
                     ),
-                    suffixIcon: enabled &&
-                        isValid &&
-                        controller.text.isNotEmpty &&
-                        !isVerified
-                        ? Container(
-                      margin: EdgeInsets.all(8),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: (isVerifying || !canResend) ? null : onVerify,
-                          borderRadius: BorderRadius.circular(width * 0.02),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: width * 0.03,
-                              vertical: width * 0.02,
-                            ),
-                            decoration: BoxDecoration(
-                              color: (isVerifying || !canResend)
-                                  ? Colors.grey.withOpacity(0.6)
-                                  : AppColors.orangeColor.withOpacity(0.8),
-                              borderRadius: BorderRadius.circular(width * 0.02),
-                            ),
-                            child: isVerifying
-                                ? SizedBox(
-                              width: width * 0.04,
-                              height: width * 0.04,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                    AppColors.whiteColor),
+                    suffixIcon:
+                        enabled &&
+                                isValid &&
+                                controller.text.isNotEmpty &&
+                                !isVerified
+                            ? Container(
+                              margin: EdgeInsets.all(8),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap:
+                                      (isVerifying || !canResend)
+                                          ? null
+                                          : onVerify,
+                                  borderRadius: BorderRadius.circular(
+                                    width * 0.02,
+                                  ),
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: width * 0.03,
+                                      vertical: width * 0.02,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          (isVerifying || !canResend)
+                                              ? Colors.grey.withOpacity(0.6)
+                                              : AppColors.orangeColor
+                                                  .withOpacity(0.8),
+                                      borderRadius: BorderRadius.circular(
+                                        width * 0.02,
+                                      ),
+                                    ),
+                                    child:
+                                        isVerifying
+                                            ? SizedBox(
+                                              width: width * 0.04,
+                                              height: width * 0.04,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor:
+                                                    AlwaysStoppedAnimation<
+                                                      Color
+                                                    >(AppColors.whiteColor),
+                                              ),
+                                            )
+                                            : !canResend
+                                            ? Text(
+                                              authProvider.formatCountdown(
+                                                countdown,
+                                              ),
+                                              style: AppTexts.bodyTextStyle(
+                                                context: context,
+                                                textColor: AppColors.whiteColor,
+                                                fontSize: width * 0.028,
+                                              ),
+                                            )
+                                            : Text(
+                                              'Verify',
+                                              style: AppTexts.bodyTextStyle(
+                                                context: context,
+                                                textColor: AppColors.whiteColor,
+                                                fontSize: width * 0.032,
+                                              ),
+                                            ),
+                                  ),
+                                ),
                               ),
                             )
-                                : !canResend
-                                ? Text(
-                              authProvider.formatCountdown(countdown),
-                              style: AppTexts.bodyTextStyle(
-                                context: context,
-                                textColor: AppColors.whiteColor,
-                                fontSize: width * 0.028,
-                              ),
-                            )
-                                : Text(
-                              'Verify',
-                              style: AppTexts.bodyTextStyle(
-                                context: context,
-                                textColor: AppColors.whiteColor,
-                                fontSize: width * 0.032,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                        : null,
+                            : null,
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(
                       horizontal: width * 0.04,

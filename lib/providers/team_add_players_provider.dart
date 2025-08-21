@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../global/apis.dart';
+import '../global/apis.dart';
 import '../../../services/shared_preference_service.dart';
 import '../models/all_players_models.dart';
 

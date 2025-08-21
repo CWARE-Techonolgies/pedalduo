@@ -9,7 +9,7 @@ import 'package:pedalduo/views/profile/customer_support/support_model.dart';
 import '../../../services/shared_preference_service.dart';
 
 class SupportTicketProvider with ChangeNotifier {
-  static const String baseUrl = AppApis.baseUrl;
+  static  String baseUrl = AppApis.baseUrl;
 
   List<SupportTicket> _tickets = [];
   SupportTicket? _selectedTicket;

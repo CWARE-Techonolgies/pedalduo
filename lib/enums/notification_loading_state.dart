@@ -1,0 +1,1 @@
+enum NotificationLoadingState { idle, loading, loaded, error }

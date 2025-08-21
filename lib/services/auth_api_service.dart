@@ -7,15 +7,15 @@ import 'package:pedalduo/utils/app_utils.dart';
 import '../models/auth_response_model.dart';
 
 class AuthApiService {
-  static const String loginEndpoint = AppApis.login;
-  static const String signupEndpoint = AppApis.signUp;
-  static const String profileEndpoint = AppApis.userProfile;
-  static const String resetPasswordEndpoint = AppApis.forgetPassword;
-  static const String resetPasswordEndpointUpdate = AppApis.updateResetPassword;
-  static const String sendEmailOtpEndpoint = AppApis.sendEmailOtp;
-  static const String verifyEmailOtpEndpoint = AppApis.verifyEmailOtp;
-  static const String sendPhoneOtpEndpoint = AppApis.sendPhoneOtp;
-  static const String verifyPhoneOtpEndpoint = AppApis.verifyPhoneOtp;
+  static String loginEndpoint = AppApis.login;
+  static String signupEndpoint = AppApis.signUp;
+  static String profileEndpoint = AppApis.userProfile;
+  static String resetPasswordEndpoint = AppApis.forgetPassword;
+  static String resetPasswordEndpointUpdate = AppApis.updateResetPassword;
+  static String sendEmailOtpEndpoint = AppApis.sendEmailOtp;
+  static String verifyEmailOtpEndpoint = AppApis.verifyEmailOtp;
+  static String sendPhoneOtpEndpoint = AppApis.sendPhoneOtp;
+  static String verifyPhoneOtpEndpoint = AppApis.verifyPhoneOtp;
 
   static Map<String, String> get headers => {
     'Content-Type': 'application/json',
@@ -190,7 +190,10 @@ class AuthApiService {
   }
 
   // Send Email OTP API
-  static Future<Map<String, dynamic>> sendEmailOtp(String email) async {
+  static Future<Map<String, dynamic>> sendEmailOtp(
+    String email,
+    BuildContext context,
+  ) async {
     debugPrint('📧 Sending email OTP to $sendEmailOtpEndpoint');
 
     try {
@@ -208,7 +211,9 @@ class AuthApiService {
         return data;
       } else {
         final errorData = jsonDecode(response.body);
+
         debugPrint('❌ Send email OTP failed: ${errorData['message']}');
+        AppUtils.showFailureSnackBar(context, errorData['message']);
         throw ApiException(
           message: errorData['message'] ?? 'Failed to send email OTP',
           statusCode: response.statusCode,
@@ -225,6 +230,7 @@ class AuthApiService {
   static Future<Map<String, dynamic>> verifyEmailOtp(
     String email,
     String otp,
+      BuildContext context
   ) async {
     debugPrint('✅ Verifying email OTP at $verifyEmailOtpEndpoint');
 
@@ -244,6 +250,7 @@ class AuthApiService {
       } else {
         final errorData = jsonDecode(response.body);
         debugPrint('❌ Verify email OTP failed: ${errorData['message']}');
+        AppUtils.showFailureSnackBar(context, errorData['message']);
         throw ApiException(
           message: errorData['message'] ?? 'Invalid email OTP',
           statusCode: response.statusCode,
@@ -279,11 +286,7 @@ class AuthApiService {
       } else {
         final errorData = jsonDecode(response.body);
         debugPrint('❌ Send phone OTP failed: ${errorData['message']}');
-        AppUtils.showInfoDialog(
-          context,
-          'Failed to Send Otp',
-          errorData['message'],
-        );
+        AppUtils.showFailureSnackBar(context, errorData['message']);
         throw ApiException(
           message: errorData['message'] ?? 'Failed to send phone OTP',
           statusCode: response.statusCode,
@@ -300,6 +303,7 @@ class AuthApiService {
   static Future<Map<String, dynamic>> verifyPhoneOtp(
     String phone,
     String otp,
+      BuildContext context
   ) async {
     debugPrint('✅ Verifying phone OTP at $verifyPhoneOtpEndpoint');
 
@@ -319,6 +323,7 @@ class AuthApiService {
       } else {
         final errorData = jsonDecode(response.body);
         debugPrint('❌ Verify phone OTP failed: ${errorData['message']}');
+        AppUtils.showFailureSnackBar(context, errorData['message']);
         throw ApiException(
           message: errorData['message'] ?? 'Invalid phone OTP',
           statusCode: response.statusCode,
@@ -372,8 +377,7 @@ class AuthApiService {
     required String email,
   }) async {
     // You'll need to define this endpoint URL
-    const String resetPasswordWithOtpEndpoint =
-        resetPasswordEndpointUpdate ;
+    String resetPasswordWithOtpEndpoint = resetPasswordEndpointUpdate;
 
     debugPrint(
       '🔄 Resetting password with OTP to $resetPasswordWithOtpEndpoint',
@@ -387,8 +391,8 @@ class AuthApiService {
           'otp': otp,
           'newPassword': newPassword,
           'confirmPassword': confirmPassword,
-          'email':email,
-          'phone':  null
+          'email': email,
+          'phone': null,
         }),
       );
 
@@ -412,7 +416,6 @@ class AuthApiService {
       throw ApiException(message: 'Network error: $e', statusCode: 0);
     }
   }
-
 }
 
 class ApiException implements Exception {

@@ -1,13 +1,17 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:pedalduo/views/auth/login_screen.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:ui';
 
 import '../../../global/constants.dart';
+import '../../../providers/delete_account_provider.dart';
 import '../../../style/colors.dart';
 import '../../../style/fonts_sizes.dart';
 import '../../../style/texts.dart';
 import '../../../utils/app_utils.dart';
+import '../../../widgets/delete_bottom_sheet.dart';
 import '../../../widgets/logout_dialogue.dart';
 import '../../auth/change_password.dart';
 import '../customer_support/support_ticket_main_screen.dart';
@@ -215,13 +219,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             isDangerous: true,
                           ),
 
-                          _buildSettingsItem(
-                            context,
-                            'Delete Account',
-                            Icons.delete_outline,
-                            AppColors.errorColor,
-                            _launchDeleteAccountRequest,
-                            isDangerous: true,
+                          Consumer<DeleteAccountProvider>(
+                            builder: (context, provider, child) {
+                              return _buildSettingsItem(
+                                context,
+                                provider.isCheckingParticipation
+                                    ? 'Checking...'
+                                    : 'Delete Account',
+                                Icons.delete_outline,
+                                AppColors.errorColor,
+                                provider.isCheckingParticipation
+                                    ? () {}
+                                    : _handleDeleteAccount,
+                                isDangerous: true,
+                              );
+                            },
                           ),
 
                           const SizedBox(height: 20),
@@ -378,14 +390,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _launchDeleteAccountRequest() async {
-    const url = AppConstants.deleteAccountRequest;
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        AppUtils.showFailureSnackBar(context, 'Could not open Privacy Policy');
+  void _handleDeleteAccount() async {
+    final provider = Provider.of<DeleteAccountProvider>(context, listen: false);
+
+    final participationData = await provider.checkActiveParticipation();
+
+    if (participationData != null && participationData['success'] == true) {
+      final hasActive = participationData['data']['hasActive'];
+
+      if (hasActive == true) {
+        // Show info dialog that account cannot be deleted
+        AppUtils.showInfoDialog(
+          context,
+          'Cannot Delete Account',
+          'You cannot delete your account as you have active participation in tournaments, teams, or matches. Please complete or leave your active participations first.',
+          buttonText: 'Understood',
+        );
+        return;
       }
     }
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
+      builder:
+          (context) => DeleteAccountBottomSheet(
+            onDeleteSuccess: () async {
+              final provider = Provider.of<DeleteAccountProvider>(
+                context,
+                listen: false,
+              );
+
+
+              await provider.clearAllData();
+              // Show grace period info dialog
+              Navigator.pushAndRemoveUntil(
+                context,
+                CupertinoPageRoute(builder: (_) => LoginScreen(comingFrom: 'Delete')),
+                (route) => false,
+              );
+              // Clear all data from SharedPreferences
+
+            },
+          ),
+    );
   }
 }

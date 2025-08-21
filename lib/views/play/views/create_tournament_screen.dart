@@ -35,9 +35,9 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<UserProfileProvider>().initializeUser().then((_) {
         final user = context.read<UserProfileProvider>().user;
-        if (user?.isFirstTournament == true) {
-          _showFirstTournamentDialog();
-        }
+        // if (user?.isFirstTournament == true) {
+        //   _showFirstTournamentDialog();
+        // }
       });
     });
     super.initState();
@@ -249,7 +249,6 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
       // Players and Teams Row
       Row(
         children: [
-
           Expanded(
             child: GlassInputField(
               title: 'Total Teams*',

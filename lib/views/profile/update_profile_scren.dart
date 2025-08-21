@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import '../../global/apis.dart';
 import '../../style/colors.dart';
 import '../../style/texts.dart';
 import '../play/providers/user_profile_provider.dart';
@@ -70,18 +71,22 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
     final provider = Provider.of<UserProfileProvider>(context, listen: false);
 
     // Check for text field changes
-    bool textFieldsChanged = _nameController.text.trim() != _originalName ||
+    bool textFieldsChanged =
+        _nameController.text.trim() != _originalName ||
         (_isPhoneVerified && _phoneController.text.trim() != _originalPhone) ||
         (_isEmailVerified && _emailController.text.trim() != _originalEmail);
 
     // Check for image changes
-    bool imageChanged = provider.selectedImage != null || provider.isImageDeleted;
+    bool imageChanged =
+        provider.selectedImage != null || provider.isImageDeleted;
 
     return textFieldsChanged || imageChanged;
   }
 
   bool _isValidEmail(String email) {
-    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    final emailRegex = RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    );
     return emailRegex.hasMatch(email);
   }
 
@@ -242,10 +247,7 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
       decoration: BoxDecoration(
         color: AppColors.glassColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppColors.glassBorderColor,
-          width: 1,
-        ),
+        border: Border.all(color: AppColors.glassBorderColor, width: 1),
       ),
       child: Column(
         children: [
@@ -266,9 +268,7 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
                     ),
                   ],
                 ),
-                child: ClipOval(
-                  child: _buildProfileImage(provider),
-                ),
+                child: ClipOval(child: _buildProfileImage(provider)),
               ),
               Positioned(
                 bottom: 0,
@@ -280,7 +280,10 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
                     height: 36,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [AppColors.primaryColor, AppColors.primaryLightColor],
+                        colors: [
+                          AppColors.primaryColor,
+                          AppColors.primaryLightColor,
+                        ],
                       ),
                       shape: BoxShape.circle,
                       boxShadow: [
@@ -317,11 +320,16 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
             GestureDetector(
               onTap: () => _showDeleteConfirmationDialog(),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.errorColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.errorColor.withOpacity(0.3)),
+                  border: Border.all(
+                    color: AppColors.errorColor.withOpacity(0.3),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -367,7 +375,8 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
     }
 
     // If user has existing image from backend, show it
-    if (provider.user?.imageUrl != null && provider.user!.imageUrl!.isNotEmpty) {
+    if (provider.user?.imageUrl != null &&
+        provider.user!.imageUrl!.isNotEmpty) {
       return Image.memory(
         base64Decode(_extractBase64(provider.user!.imageUrl!)),
         fit: BoxFit.cover,
@@ -385,8 +394,8 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
 
   bool _shouldShowDeleteButton(UserProfileProvider provider) {
     return (!provider.isImageDeleted &&
-        provider.user?.imageUrl != null &&
-        provider.user!.imageUrl!.isNotEmpty) ||
+            provider.user?.imageUrl != null &&
+            provider.user!.imageUrl!.isNotEmpty) ||
         provider.selectedImage != null;
   }
 
@@ -396,10 +405,7 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
       decoration: BoxDecoration(
         color: AppColors.glassColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppColors.glassBorderColor,
-          width: 1,
-        ),
+        border: Border.all(color: AppColors.glassBorderColor, width: 1),
       ),
       child: Column(
         children: [
@@ -432,7 +438,8 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
             isVerifying: _isEmailVerifying,
             onVerify: _handleEmailVerification,
             enabled: !_isEmailVerified,
-            showVerifyButton: _isValidEmail(_emailController.text) &&
+            showVerifyButton:
+                _isValidEmail(_emailController.text) &&
                 _emailController.text.trim() != _originalEmail &&
                 !_isEmailVerified,
             onChanged: (value) {
@@ -462,11 +469,7 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
             const SizedBox(height: 12),
             Row(
               children: [
-                Icon(
-                  Icons.verified,
-                  color: AppColors.successColor,
-                  size: 16,
-                ),
+                Icon(Icons.verified, color: AppColors.successColor, size: 16),
                 const SizedBox(width: 8),
                 Text(
                   'Email verified successfully',
@@ -493,7 +496,8 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
             isVerifying: _isPhoneVerifying,
             onVerify: _handlePhoneVerification,
             enabled: !_isPhoneVerified,
-            showVerifyButton: _isValidPhone(_phoneController.text) &&
+            showVerifyButton:
+                _isValidPhone(_phoneController.text) &&
                 _phoneController.text.trim() != _originalPhone &&
                 !_isPhoneVerified,
             onChanged: (value) {
@@ -509,15 +513,17 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
 
           // Phone OTP field
           if (_showPhoneOtp) ...[
-            const SizedBox(height: 12),
-            Text(
-              'As the application is currently in Testing Mode, Use 123456 as your OTP',
-              style: AppTexts.bodyTextStyle(
-                context: context,
-                textColor: AppColors.textSecondaryColor,
-                fontSize: 12,
+            if (!AppApis.isProduction) ...[
+              SizedBox(height: MediaQuery.sizeOf(context).height * 0.01),
+              Text(
+                'As the application is currently in the Testing Mode, Use 123456 as your OTP',
+                style: AppTexts.emphasizedTextStyle(
+                  context: context,
+                  textColor: AppColors.whiteColor.withOpacity(0.8),
+                  fontSize: MediaQuery.sizeOf(context).width * 0.038,
+                ),
               ),
-            ),
+            ],
             const SizedBox(height: 12),
             _buildOtpField(
               controller: _phoneOtpController,
@@ -532,11 +538,7 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
             const SizedBox(height: 12),
             Row(
               children: [
-                Icon(
-                  Icons.verified,
-                  color: AppColors.successColor,
-                  size: 16,
-                ),
+                Icon(Icons.verified, color: AppColors.successColor, size: 16),
                 const SizedBox(width: 8),
                 Text(
                   'Phone number verified successfully',
@@ -626,46 +628,58 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(
-          color: enabled ? AppColors.textSecondaryColor : AppColors.textSecondaryColor.withOpacity(0.6),
+          color:
+              enabled
+                  ? AppColors.textSecondaryColor
+                  : AppColors.textSecondaryColor.withOpacity(0.6),
         ),
         prefixIcon: Icon(
           isVerified ? Icons.verified : icon,
           color: isVerified ? AppColors.successColor : AppColors.primaryColor,
         ),
-        suffixIcon: showVerifyButton ? Container(
-          margin: const EdgeInsets.all(8),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: isVerifying ? null : onVerify,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryColor,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: isVerifying
-                    ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.whiteColor),
+        suffixIcon:
+            showVerifyButton
+                ? Container(
+                  margin: const EdgeInsets.all(8),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: isVerifying ? null : onVerify,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child:
+                            isVerifying
+                                ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      AppColors.whiteColor,
+                                    ),
+                                  ),
+                                )
+                                : Text(
+                                  'Verify',
+                                  style: AppTexts.bodyTextStyle(
+                                    context: context,
+                                    textColor: AppColors.whiteColor,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                      ),
+                    ),
                   ),
                 )
-                    : Text(
-                  'Verify',
-                  style: AppTexts.bodyTextStyle(
-                    context: context,
-                    textColor: AppColors.whiteColor,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ) : null,
+                : null,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: AppColors.glassBorderColor),
@@ -680,9 +694,10 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
-            color: isVerified
-                ? AppColors.successColor.withOpacity(0.6)
-                : AppColors.glassBorderColor,
+            color:
+                isVerified
+                    ? AppColors.successColor.withOpacity(0.6)
+                    : AppColors.glassBorderColor,
           ),
         ),
         disabledBorder: OutlineInputBorder(
@@ -692,7 +707,10 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
           ),
         ),
         filled: true,
-        fillColor: enabled ? AppColors.glassColor : AppColors.glassColor.withOpacity(0.5),
+        fillColor:
+            enabled
+                ? AppColors.glassColor
+                : AppColors.glassColor.withOpacity(0.5),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
@@ -700,7 +718,10 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
       ),
       style: AppTexts.bodyTextStyle(
         context: context,
-        textColor: enabled ? AppColors.textPrimaryColor : AppColors.textPrimaryColor.withOpacity(0.6),
+        textColor:
+            enabled
+                ? AppColors.textPrimaryColor
+                : AppColors.textPrimaryColor.withOpacity(0.6),
       ),
     );
   }
@@ -719,40 +740,49 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
         labelText: label,
         labelStyle: TextStyle(color: AppColors.textSecondaryColor),
         prefixIcon: Icon(Icons.security, color: AppColors.primaryColor),
-        suffixIcon: controller.text.length == 6 ? Container(
-          margin: const EdgeInsets.all(8),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: isVerifying ? null : onVerify,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryColor,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: isVerifying
-                    ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.whiteColor),
+        suffixIcon:
+            controller.text.length == 6
+                ? Container(
+                  margin: const EdgeInsets.all(8),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: isVerifying ? null : onVerify,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child:
+                            isVerifying
+                                ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      AppColors.whiteColor,
+                                    ),
+                                  ),
+                                )
+                                : Text(
+                                  'Verify',
+                                  style: AppTexts.bodyTextStyle(
+                                    context: context,
+                                    textColor: AppColors.whiteColor,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                      ),
+                    ),
                   ),
                 )
-                    : Text(
-                  'Verify',
-                  style: AppTexts.bodyTextStyle(
-                    context: context,
-                    textColor: AppColors.whiteColor,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ) : null,
+                : null,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: AppColors.glassBorderColor),
@@ -789,14 +819,16 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
       height: 52,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: isEnabled
-              ? [AppColors.primaryColor, AppColors.primaryLightColor]
-              : [AppColors.greyColor, AppColors.darkGreyColor],
+          colors:
+              isEnabled
+                  ? [AppColors.primaryColor, AppColors.primaryLightColor]
+                  : [AppColors.greyColor, AppColors.darkGreyColor],
         ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: (isEnabled ? AppColors.primaryColor : AppColors.greyColor).withOpacity(0.3),
+            color: (isEnabled ? AppColors.primaryColor : AppColors.greyColor)
+                .withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -811,19 +843,20 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        child: provider.isUpdating
-            ? const SpinKitThreeBounce(
-          color: AppColors.whiteColor,
-          size: 20.0,
-        )
-            : Text(
-          'Update Profile',
-          style: AppTexts.emphasizedTextStyle(
-            context: context,
-            textColor: AppColors.whiteColor,
-            fontSize: 16,
-          ),
-        ),
+        child:
+            provider.isUpdating
+                ? const SpinKitThreeBounce(
+                  color: AppColors.whiteColor,
+                  size: 20.0,
+                )
+                : Text(
+                  'Update Profile',
+                  style: AppTexts.emphasizedTextStyle(
+                    context: context,
+                    textColor: AppColors.whiteColor,
+                    fontSize: 16,
+                  ),
+                ),
       ),
     );
   }
@@ -869,32 +902,37 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
       }
 
       // Prepare update data
-      String? emailToUpdate = _isEmailVerified ? _emailController.text.trim() : null;
-      String? phoneToUpdate = _isPhoneVerified ? _phoneController.text.trim() : null;
+      String? emailToUpdate =
+          _isEmailVerified ? _emailController.text.trim() : null;
+      String? phoneToUpdate =
+          _isPhoneVerified ? _phoneController.text.trim() : null;
 
       provider
           .updateUserProfile(
-        name: _nameController.text.trim(),
-        phone: phoneToUpdate ?? _originalPhone,
-        email: emailToUpdate ?? _originalEmail,
-        avatar: avatarBase64,
-      )
+            name: _nameController.text.trim(),
+            phone: phoneToUpdate ?? _originalPhone,
+            email: emailToUpdate ?? _originalEmail,
+            avatar: avatarBase64,
+          )
           .then((_) {
-        if (mounted && provider.errorMessage == null) {
-          // Update original values after successful update
-          setState(() {
-            _originalName = _nameController.text.trim();
-            if (_isEmailVerified) {
-              _originalEmail = _emailController.text.trim();
-            }
-            if (_isPhoneVerified) {
-              _originalPhone = _phoneController.text.trim();
+            if (mounted && provider.errorMessage == null) {
+              // Update original values after successful update
+              setState(() {
+                _originalName = _nameController.text.trim();
+                if (_isEmailVerified) {
+                  _originalEmail = _emailController.text.trim();
+                }
+                if (_isPhoneVerified) {
+                  _originalPhone = _phoneController.text.trim();
+                }
+              });
+
+              _showSnackBar(
+                'Profile updated successfully!',
+                AppColors.successColor,
+              );
             }
           });
-
-          _showSnackBar('Profile updated successfully!', AppColors.successColor);
-        }
-      });
     }
   }
 
@@ -935,40 +973,48 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
             Consumer<UserProfileProvider>(
               builder: (context, provider, child) {
                 return TextButton(
-                  onPressed: provider.isUpdating ? null : () async {
-                    Navigator.of(dialogContext).pop();
-                    final success = await provider.deleteProfileImageFromServer();
+                  onPressed:
+                      provider.isUpdating
+                          ? null
+                          : () async {
+                            Navigator.of(dialogContext).pop();
+                            final success =
+                                await provider.deleteProfileImageFromServer();
 
-                    if (mounted) {
-                      if (success) {
-                        _showSnackBar(
-                          'Profile picture deleted successfully!',
-                          AppColors.successColor,
-                        );
-                      } else {
-                        _showSnackBar(
-                          provider.errorMessage ?? 'Failed to delete profile picture',
-                          AppColors.errorColor,
-                        );
-                      }
-                    }
-                  },
-                  child: provider.isUpdating
-                      ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.errorColor),
-                    ),
-                  )
-                      : Text(
-                    'Delete',
-                    style: AppTexts.bodyTextStyle(
-                      context: context,
-                      textColor: AppColors.errorColor,
-                    ),
-                  ),
+                            if (mounted) {
+                              if (success) {
+                                _showSnackBar(
+                                  'Profile picture deleted successfully!',
+                                  AppColors.successColor,
+                                );
+                              } else {
+                                _showSnackBar(
+                                  provider.errorMessage ??
+                                      'Failed to delete profile picture',
+                                  AppColors.errorColor,
+                                );
+                              }
+                            }
+                          },
+                  child:
+                      provider.isUpdating
+                          ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.errorColor,
+                              ),
+                            ),
+                          )
+                          : Text(
+                            'Delete',
+                            style: AppTexts.bodyTextStyle(
+                              context: context,
+                              textColor: AppColors.errorColor,
+                            ),
+                          ),
                 );
               },
             ),
@@ -995,9 +1041,15 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
       });
 
       if (success) {
-        _showSnackBar('OTP sent to your email successfully!', AppColors.successColor);
+        _showSnackBar(
+          'OTP sent to your email successfully!',
+          AppColors.successColor,
+        );
       } else {
-        _showSnackBar('Failed to send OTP. Please try again.', AppColors.errorColor);
+        _showSnackBar(
+          'Failed to send OTP. Please try again.',
+          AppColors.errorColor,
+        );
       }
     }
   }
@@ -1047,9 +1099,15 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
       });
 
       if (success) {
-        _showSnackBar('OTP sent to your phone successfully!', AppColors.successColor);
+        _showSnackBar(
+          'OTP sent to your phone successfully!',
+          AppColors.successColor,
+        );
       } else {
-        _showSnackBar('Failed to send OTP. Please try again.', AppColors.errorColor);
+        _showSnackBar(
+          'Failed to send OTP. Please try again.',
+          AppColors.errorColor,
+        );
       }
     }
   }
@@ -1075,7 +1133,10 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
       });
 
       if (success) {
-        _showSnackBar('Phone number verified successfully!', AppColors.successColor);
+        _showSnackBar(
+          'Phone number verified successfully!',
+          AppColors.successColor,
+        );
       } else {
         _showSnackBar('Invalid OTP. Please try again.', AppColors.errorColor);
       }
@@ -1095,11 +1156,7 @@ class _UserProfileUpdateScreenState extends State<UserProfileUpdateScreen> {
       width: 120,
       height: 120,
       color: AppColors.darkSecondaryColor,
-      child: Icon(
-        Icons.person,
-        size: 60,
-        color: AppColors.textSecondaryColor,
-      ),
+      child: Icon(Icons.person, size: 60, color: AppColors.textSecondaryColor),
     );
   }
 }

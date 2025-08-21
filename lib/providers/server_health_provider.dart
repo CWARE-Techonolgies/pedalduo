@@ -15,8 +15,7 @@ class ServerHealthProvider extends ChangeNotifier {
   bool get isCheckingHealth => _isCheckingHealth;
   Map<String, dynamic>? get lastHealthData => _lastHealthData;
 
-  // Replace with your actual health endpoint
-  static const String _healthEndpoint = AppApis.baseUrl;
+  static String _healthEndpoint = AppApis.baseUrl;
 
   ServerHealthProvider() {
     // Start periodic health checks when provider is created
@@ -38,13 +37,15 @@ class ServerHealthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.get(
-        Uri.parse(_healthEndpoint),
-        headers: {
-          'Content-Type': 'application/json',
-          // Add any required headers like authorization
-        },
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(
+            Uri.parse(_healthEndpoint),
+            headers: {
+              'Content-Type': 'application/json',
+              // Add any required headers like authorization
+            },
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -69,12 +70,12 @@ class ServerHealthProvider extends ChangeNotifier {
   /// Silent health check (without showing loading state)
   Future<void> _checkServerHealthSilently() async {
     try {
-      final response = await http.get(
-        Uri.parse(_healthEndpoint),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(
+            Uri.parse(_healthEndpoint),
+            headers: {'Content-Type': 'application/json'},
+          )
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

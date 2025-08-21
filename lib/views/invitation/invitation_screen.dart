@@ -522,42 +522,39 @@ class _InvitationsScreenState extends State<InvitationsScreen>
             ),
           ],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(25),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: EdgeInsets.all(screenSize.width * 0.04),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.primaryColor.withOpacity(0.2),
-                        AppColors.primaryLightColor.withOpacity(0.1),
-                      ],
-                    ),
-                    shape: BoxShape.circle,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 1, sigmaY: 1),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(screenSize.width * 0.04),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primaryColor.withOpacity(0.2),
+                      AppColors.primaryLightColor.withOpacity(0.1),
+                    ],
                   ),
-                  child: Icon(
-                    icon,
-                    size: screenSize.width * 0.15,
-                    color: AppColors.textSecondaryColor,
-                  ),
+                  shape: BoxShape.circle,
                 ),
-                SizedBox(height: screenSize.width * 0.04),
-                Text(
-                  message,
-                  style: AppTexts.emphasizedTextStyle(
-                    context: context,
-                    textColor: AppColors.textSecondaryColor,
-                    fontSize: screenSize.width * 0.04,
-                  ),
-                  textAlign: TextAlign.center,
+                child: Icon(
+                  icon,
+                  size: screenSize.width * 0.15,
+                  color: AppColors.textSecondaryColor,
                 ),
-              ],
-            ),
+              ),
+              SizedBox(height: screenSize.width * 0.04),
+              Text(
+                message,
+                style: AppTexts.emphasizedTextStyle(
+                  context: context,
+                  textColor: AppColors.textSecondaryColor,
+                  fontSize: screenSize.width * 0.04,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
       ),

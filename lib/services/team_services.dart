@@ -8,7 +8,7 @@ import '../global/apis.dart';
 import '../views/play/models/team_model.dart';
 
 class TeamService {
-  static const String baseUrl = AppApis.myTeams;
+  static  String baseUrl = AppApis.myTeams;
 
   Future<String?> _getAuthToken() async {
     final prefs = await SharedPreferences.getInstance();

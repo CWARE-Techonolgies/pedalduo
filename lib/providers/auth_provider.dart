@@ -350,7 +350,7 @@ class UserAuthProvider extends ChangeNotifier {
         otp: resetOtpController.text.trim(),
         newPassword: newPasswordController.text,
         confirmPassword: confirmNewPasswordController.text,
-        email: emailController.text
+        email: emailController.text,
       );
 
       _isResettingPassword = false;
@@ -517,8 +517,7 @@ class UserAuthProvider extends ChangeNotifier {
       _phoneError = 'Phone number is required';
     } else if (!pakistaniPhoneRegex1.hasMatch(cleanPhone)) {
       _isPhoneValid = false;
-      _phoneError =
-          'Enter valid Pakistani number (+923xxxxxxxxx or 03xxxxxxxxx)';
+      _phoneError = 'Enter valid Pakistani number (+923xxxxxxxxx)';
     } else {
       _isPhoneValid = true;
       _phoneError = '';
@@ -825,7 +824,7 @@ class UserAuthProvider extends ChangeNotifier {
   bool get isLoggedIn => _currentUser != null && _authToken != null;
 
   // Send Email OTP
-  Future<bool> sendEmailOtp() async {
+  Future<bool> sendEmailOtp(BuildContext context) async {
     if (!_isEmailValid || emailController.text.isEmpty || !canResendEmailOtp) {
       return false;
     }
@@ -836,6 +835,7 @@ class UserAuthProvider extends ChangeNotifier {
     try {
       final response = await AuthApiService.sendEmailOtp(
         emailController.text.trim(),
+        context,
       );
 
       _showEmailOtp = true;
@@ -923,7 +923,7 @@ class UserAuthProvider extends ChangeNotifier {
     return '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
   }
 
-  Future<bool> verifyEmailOtp() async {
+  Future<bool> verifyEmailOtp(BuildContext context) async {
     validateEmailOtp(emailOtpController.text);
 
     if (!_isEmailOtpValid) {
@@ -937,6 +937,7 @@ class UserAuthProvider extends ChangeNotifier {
       final response = await AuthApiService.verifyEmailOtp(
         emailController.text.trim(),
         emailOtpController.text.trim(),
+        context,
       );
 
       _isEmailVerified = true;
@@ -959,7 +960,7 @@ class UserAuthProvider extends ChangeNotifier {
   }
 
   // Updated Verify Phone OTP - stop timer on success
-  Future<bool> verifyPhoneOtp() async {
+  Future<bool> verifyPhoneOtp(BuildContext context) async {
     validatePhoneOtp(phoneOtpController.text);
 
     if (!_isPhoneOtpValid) {
@@ -973,6 +974,7 @@ class UserAuthProvider extends ChangeNotifier {
       final response = await AuthApiService.verifyPhoneOtp(
         phoneController.text.trim(),
         phoneOtpController.text.trim(),
+        context,
       );
 
       _isPhoneVerified = true;

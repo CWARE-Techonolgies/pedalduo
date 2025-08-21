@@ -1,12 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:pedalduo/views/play/providers/tournament_provider.dart';
-import 'package:pedalduo/views/play/views/team_tabs.dart';
 import 'package:pedalduo/views/play/views/tournaments_tab.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
-
-import '../../../chat/chat_rooms_screen.dart';
 import '../../../style/colors.dart';
 import '../../../style/fonts_sizes.dart';
 import '../../../style/texts.dart';
@@ -14,13 +11,16 @@ import 'create_tournament_screen.dart';
 import 'matches_tab.dart';
 
 class PlayScreen extends StatelessWidget {
-  const PlayScreen({super.key});
+  final int initialTabIndex;
+  const PlayScreen({super.key, required this.initialTabIndex});
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TournamentProvider>().setSelectedTab(initialTabIndex);
+    });
     return Scaffold(
       backgroundColor: AppColors.navyBlueGrey,
       extendBodyBehindAppBar: true,
@@ -169,82 +169,6 @@ class PlayScreen extends StatelessWidget {
             SizedBox(
               height: MediaQuery.of(context).padding.top + kToolbarHeight,
             ),
-
-            // Enhanced Search Bar with Glassmorphism
-            // Padding(
-            //   padding: EdgeInsets.symmetric(
-            //     horizontal: screenWidth * 0.04,
-            //     vertical: screenHeight * 0.02,
-            //   ),
-            //   child: Container(
-            //     height: screenHeight * 0.065,
-            //     decoration: BoxDecoration(
-            //       borderRadius: BorderRadius.circular(screenWidth * 0.08),
-            //       gradient: LinearGradient(
-            //         begin: Alignment.topLeft,
-            //         end: Alignment.bottomRight,
-            //         colors: [
-            //           AppColors.lightNavyBlueGrey.withOpacity(0.7),
-            //           AppColors.navyBlueGrey.withOpacity(0.5),
-            //         ],
-            //       ),
-            //       border: Border.all(
-            //         color: AppColors.lightOrangeColor.withOpacity(0.2),
-            //         width: 1,
-            //       ),
-            //       boxShadow: [
-            //         BoxShadow(
-            //           color: AppColors.lightOrangeColor.withOpacity(0.1),
-            //           blurRadius: 20,
-            //           offset: const Offset(0, 10),
-            //         ),
-            //       ],
-            //     ),
-            //     child: ClipRRect(
-            //       borderRadius: BorderRadius.circular(screenWidth * 0.08),
-            //       child: BackdropFilter(
-            //         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            //         child: TextField(
-            //           style: AppTexts.bodyTextStyle(
-            //             context: context,
-            //             textColor: AppColors.whiteColor,
-            //             fontSize: AppFontSizes(context).size14,
-            //           ),
-            //           decoration: InputDecoration(
-            //             hintText: 'Search tournaments or fields...',
-            //             hintStyle: AppTexts.bodyTextStyle(
-            //               context: context,
-            //               textColor: AppColors.greyColor.withOpacity(0.8),
-            //               fontSize: AppFontSizes(context).size14,
-            //             ),
-            //             prefixIcon: Container(
-            //               padding: EdgeInsets.all(screenWidth * 0.02),
-            //               child: Icon(
-            //                 Icons.search_rounded,
-            //                 color: AppColors.lightOrangeColor.withOpacity(0.8),
-            //                 size: screenWidth * 0.05,
-            //               ),
-            //             ),
-            //             suffixIcon: Container(
-            //               padding: EdgeInsets.all(screenWidth * 0.02),
-            //               child: Icon(
-            //                 Icons.tune_rounded,
-            //                 color: AppColors.darkOrangeColor.withOpacity(0.8),
-            //                 size: screenWidth * 0.05,
-            //               ),
-            //             ),
-            //             border: InputBorder.none,
-            //             contentPadding: EdgeInsets.symmetric(
-            //               vertical: screenHeight * 0.018,
-            //             ),
-            //           ),
-            //         ),
-            //       ),
-            //     ),
-            //   ),
-            // ),
-
-            // Enhanced Tab Bar with Glassmorphism
             Consumer<TournamentProvider>(
               builder: (context, provider, child) {
                 return Container(
@@ -295,8 +219,8 @@ class PlayScreen extends StatelessWidget {
                               context: context,
                               title: 'Matches',
                               icon: Icons.sports_soccer_rounded,
-                              isSelected: provider.selectedTabIndex == 2,
-                              onTap: () => provider.setSelectedTab(2),
+                              isSelected: provider.selectedTabIndex == 1,
+                              onTap: () => provider.setSelectedTab(1),
                             ),
                           ),
                         ],
@@ -348,8 +272,6 @@ class PlayScreen extends StatelessWidget {
                           case 0:
                             return const TournamentsTab();
                           case 1:
-                            return const TeamsTab();
-                          case 2:
                             return const MatchesTab();
                           default:
                             return const TournamentsTab();

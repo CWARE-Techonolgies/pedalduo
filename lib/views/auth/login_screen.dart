@@ -9,9 +9,11 @@ import '../../global/images.dart';
 import '../../providers/auth_provider.dart';
 import '../../style/colors.dart';
 import '../../style/texts.dart';
+import '../../utils/app_utils.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final String? comingFrom;
+  const LoginScreen({super.key, this.comingFrom = 'No Delete'});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -29,6 +31,17 @@ class _LoginScreenState extends State<LoginScreen>
     super.initState();
     _initializeAnimations();
     _startAnimations();
+
+    if (widget.comingFrom == 'Delete') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        AppUtils.showInfoDialog(
+          context,
+          'Account Deletion Initiated',
+          'Your account has been scheduled for deletion and is now in a 30-day grace period. If you do not log in within 30 days, your account will be permanently deleted.',
+          buttonText: 'Understood',
+        );
+      });
+    }
   }
 
   void _initializeAnimations() {

@@ -302,7 +302,7 @@ class _WinnerDialogState extends State<WinnerDialog>
                                 Navigator.pushReplacement(
                                   context,
                                   CupertinoPageRoute(
-                                    builder: (_) => PlayScreen(),
+                                    builder: (_) => PlayScreen(initialTabIndex: 0,),
                                   ),
                                 );
                               },

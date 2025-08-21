@@ -53,6 +53,7 @@ dependencies:
   device_info_plus:
   crypto:
   image:
+  timeago:
   socket_io_client:
 #  flutter_app_badger:
   connectivity_plus:

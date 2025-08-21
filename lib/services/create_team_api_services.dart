@@ -7,18 +7,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/club_team_member_model.dart';
 
 class ClubTeamApiService {
-  static const String baseUrl = AppApis.baseUrl;
-
   // API Endpoints
-  static const String createClubTeam = "${baseUrl}club-teams";
-  static const String userClubTeam = "${baseUrl}club-teams/my-team";
-  static const String publicTeamsTeam = "${baseUrl}club-teams/public-teams";
-  static const String getClubTeamById = "${baseUrl}club-teams";
-  static const String joinPublicTeam = "${baseUrl}club-teams";
-  static const String transferCaptaincy = "${baseUrl}club-teams";
-  static const String teamPrivacyUpdate = "${baseUrl}club-teams";
-  static const String removeMemberFromTeam = "${baseUrl}club-teams";
-  static const String leaveClubTeam = "${baseUrl}club-teams";
+  static String createClubTeam = "${AppApis.baseUrl}club-teams";
+  static String userClubTeam = "${AppApis.baseUrl}club-teams/my-team";
+  static String publicTeamsTeam = "${AppApis.baseUrl}club-teams/public-teams";
+  static String getClubTeamById = "${AppApis.baseUrl}club-teams";
+  static String joinPublicTeam = "${AppApis.baseUrl}club-teams";
+  static String transferCaptaincy = "${AppApis.baseUrl}club-teams";
+  static String teamPrivacyUpdate = "${AppApis.baseUrl}club-teams";
+  static String removeMemberFromTeam = "${AppApis.baseUrl}club-teams";
+  static String leaveClubTeam = "${AppApis.baseUrl}club-teams";
 
   // Get auth token from shared preferences
   static Future<String?> _getAuthToken() async {
@@ -34,26 +32,29 @@ class ClubTeamApiService {
     };
   }
 
-
-  static Future<ApiResponse<TournamentRegistrationResponse>> registerForTournament(
-      int teamId,
-      TournamentRegistrationRequest request,
-      ) async {
+  static Future<ApiResponse<TournamentRegistrationResponse>>
+  registerForTournament(
+    int teamId,
+    TournamentRegistrationRequest request,
+  ) async {
     try {
       final token = await _getAuthToken();
       final response = await http.post(
-        Uri.parse('$baseUrl${'club-teams'}/$teamId/register-tournament'),
+        Uri.parse(
+          '${AppApis.baseUrl}${'club-teams'}/$teamId/register-tournament',
+        ),
         headers: _getHeaders(token),
         body: jsonEncode(request.toJson()),
       );
 
       return _handleResponse(
         response,
-            (data) => ApiResponse<TournamentRegistrationResponse>(
+        (data) => ApiResponse<TournamentRegistrationResponse>(
           success: data['success'] as bool,
-          data: data['data'] != null
-              ? TournamentRegistrationResponse.fromJson(data['data'])
-              : null,
+          data:
+              data['data'] != null
+                  ? TournamentRegistrationResponse.fromJson(data['data'])
+                  : null,
           message: data['message'] as String?,
         ),
       );
@@ -61,9 +62,6 @@ class ClubTeamApiService {
       throw ClubTeamApiException(message: 'Network error: ${e.toString()}');
     }
   }
-
-
-
 
   // Handle API response
   static T _handleResponse<T>(
